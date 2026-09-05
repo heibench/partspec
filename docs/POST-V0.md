@@ -153,5 +153,5 @@ eviction machinery is `engines/pycad.py`'s module registry — whose two recorde
 (a same-second same-length edit defeating CPython's pyc validation, and the registry's
 refusal to sweep by directory) are the part worth remembering.
 
-[survey-absorption]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/03-cad-khana-absorption.md
-[survey-direction]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/DIRECTION.md
+[survey-absorption]: https://github.com/heibench/partspec/blob/main/notes/survey/03-cad-khana-absorption.md
+[survey-direction]: https://github.com/heibench/partspec/blob/main/notes/survey/DIRECTION.md

@@ -34,7 +34,7 @@ from pathlib import Path
 
 __all__ = ["DOCS_URL", "docs_root"]
 
-DOCS_URL = "https://github.com/CameronBrooks11/partspec/tree/main/docs"
+DOCS_URL = "https://github.com/heibench/partspec/tree/main/docs"
 """Where the documents are when this copy does not carry them."""
 
 _ENTRY_POINTS = ("docs/AGENT-CONTRACT.md", "skills/contract-authoring/SKILL.md")

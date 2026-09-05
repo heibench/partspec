@@ -617,5 +617,5 @@ difference.
 This is the substitutability proof. Without it, "one contract, evaluated identically
 wherever it can be" is an assertion rather than a property.
 
-[survey-absorption]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/03-cad-khana-absorption.md
-[survey-capability]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/04-kernel-capability.md
+[survey-absorption]: https://github.com/heibench/partspec/blob/main/notes/survey/03-cad-khana-absorption.md
+[survey-capability]: https://github.com/heibench/partspec/blob/main/notes/survey/04-kernel-capability.md

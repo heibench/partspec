@@ -22,7 +22,7 @@ normatively. Long, and structured for lookup rather than a sitting.
 
 The `skills/contract-authoring` skill is the worked version of the same
 material, and
-[`examples/`](https://github.com/CameronBrooks11/partspec/tree/main/examples)
+[`examples/`](https://github.com/heibench/partspec/tree/main/examples)
 has five parts whose READMEs say what each is meant to teach.
 
 ## I want to read what the tool produced

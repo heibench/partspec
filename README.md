@@ -5,7 +5,7 @@ Verify CAD-as-code parts against declared engineering intent.
 > **Status: pre-alpha; v0.7.8 is on PyPI.** It runs end to end and is dogfooded on real
 > parts. Expect the Python API to move: the stable surface is the report schema plus the
 > exit codes. What changed in each release is in
-> [CHANGELOG.md](https://github.com/CameronBrooks11/partspec/blob/main/CHANGELOG.md).
+> [CHANGELOG.md](https://github.com/heibench/partspec/blob/main/CHANGELOG.md).
 
 `partspec.run()` is internal: it is importable, it is not in `__all__`, and its signature may
 change without a major bump. The package is fully annotated and ships a `py.typed` marker, so a
@@ -28,7 +28,7 @@ uv run partspec check examples/spacer/spec.py:spacer
 Engines are optional extras — `mesh`, `occt`, `cadquery` — so `uv sync --extra mesh` is
 enough for OpenSCAD-only work. The `mcp` extra adds `partspec-mcp`, a stdio MCP server
 exposing `check`, `measure`, `render` and `vdiff` as stateless tools: each call runs the CLI in a
-fresh subprocess and returns its artifact, per the boundary in [D18](https://github.com/CameronBrooks11/partspec/blob/main/docs/DECISIONS.md).
+fresh subprocess and returns its artifact, per the boundary in [D18](https://github.com/heibench/partspec/blob/main/docs/DECISIONS.md).
 
 The `openscad` binary is a system dependency and is not on the wheel's dependency list,
 and installing both Python engines under plain `pip` needs one extra step —
@@ -39,9 +39,9 @@ and installing both Python engines under plain `pip` needs one extra step —
 The committed claims pin is what makes a contract enforceable by a machine: it
 records the *claim set*, so a run whose contract has drifted from it fails
 before the engine starts. `examples/spacer/` carries the worked copy —
-[`claims.lock`](https://github.com/CameronBrooks11/partspec/blob/main/examples/spacer/claims.lock)
+[`claims.lock`](https://github.com/heibench/partspec/blob/main/examples/spacer/claims.lock)
 beside the contract, and
-[its README](https://github.com/CameronBrooks11/partspec/blob/main/examples/spacer/README.md)
+[its README](https://github.com/heibench/partspec/blob/main/examples/spacer/README.md)
 walks the `--pin` / `--expect` loop end to end. This repository's own CI runs
 that exemplar on every pull request and on every push to `main`, so the snippet
 below is a shape that is gated rather than one that is merely written down.
@@ -67,7 +67,7 @@ jobs:
 
 What a red job means, and it is not one thing — the codes are enumerated once,
 [below](#what-it-is-for), and what each *obliges a reader to do* is
-[`docs/AGENT-CONTRACT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/AGENT-CONTRACT.md)
+[`docs/AGENT-CONTRACT.md`](https://github.com/heibench/partspec/blob/main/docs/AGENT-CONTRACT.md)
 §2. The distinction this job turns on: `1` is a verdict about the **part** (a
 declared limit was violated — fix the model), while `2`, `3`, `4` and `64` are
 statements about the **run** (nothing was proven — the checks could not be
@@ -114,7 +114,7 @@ EVIDENCE.txt  handed_to_me.py  outputs
 So treat a contract exactly as you would treat any other Python you were handed: read it
 before you run it. This matters most where partspec is most useful — an agent pointed at
 "the contract in this repo", or the MCP server, where the caller sees a tool list and
-nothing else. [SECURITY.md](https://github.com/CameronBrooks11/partspec/blob/main/SECURITY.md)
+nothing else. [SECURITY.md](https://github.com/heibench/partspec/blob/main/SECURITY.md)
 states the boundary in full and says how to report something that crosses it.
 
 ## What runs today
@@ -128,15 +128,15 @@ answers with a guaranteed interval and says `approximate` rather than guess when
 inside it. The loop is built to run unattended: every build is bounded (`--timeout`), `check`
 takes many targets in one process, a committed claims pin (`--pin`/`--expect`) catches a
 contract that shrank with no baseline in hand, and the rules an agent follows are
-[`docs/AGENT-CONTRACT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/AGENT-CONTRACT.md).
+[`docs/AGENT-CONTRACT.md`](https://github.com/heibench/partspec/blob/main/docs/AGENT-CONTRACT.md).
 And the repo teaches the craft it verifies: `partspec lint` (advisory; tier 1 is engine-free,
 the three `csg-*` tier-2 rules need the OpenSCAD binary and refuse without it), three authoring
 skills, worked exemplars, the observed [failure
-catalogue](https://github.com/CameronBrooks11/partspec/blob/main/docs/FAILURE-MODES.md), and a
+catalogue](https://github.com/heibench/partspec/blob/main/docs/FAILURE-MODES.md), and a
 [recorded
-before/after](https://github.com/CameronBrooks11/partspec/blob/main/evals/AUTHORING.md) showing
+before/after](https://github.com/heibench/partspec/blob/main/evals/AUTHORING.md) showing
 what the guidance changes.
-[`docs/POST-V0.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/POST-V0.md)
+[`docs/POST-V0.md`](https://github.com/heibench/partspec/blob/main/docs/POST-V0.md)
 records what is still withheld and why.
 
 ## Engines
@@ -267,7 +267,7 @@ bore that has to clear an 8 mm shaft. Usually it lives in a README, a comment, o
 head, and nothing checks it. `partspec` lets you declare it next to the model and enforce
 it in CI.
 
-This is [`examples/spacer/spec.py`](https://github.com/CameronBrooks11/partspec/blob/main/examples/spacer/spec.py) — the whole contract, minus
+This is [`examples/spacer/spec.py`](https://github.com/heibench/partspec/blob/main/examples/spacer/spec.py) — the whole contract, minus
 docstrings and formatting:
 
 ```python
@@ -332,18 +332,18 @@ with its citation recorded in the report.
 `partspec lint` gives advisory findings about the source itself — magic numbers,
 unused parameters, oversize modules — before a render is ever attempted; the rules and
 their exact predicates are
-[`docs/LINT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/LINT.md).
+[`docs/LINT.md`](https://github.com/heibench/partspec/blob/main/docs/LINT.md).
 How to write a contract that proves something — check selection, limit provenance, the
 retrofit path — is
-[`skills/contract-authoring/`](https://github.com/CameronBrooks11/partspec/tree/main/skills/contract-authoring).
+[`skills/contract-authoring/`](https://github.com/heibench/partspec/tree/main/skills/contract-authoring).
 The source-side rules are split by engine, and the contract skill routes you: OpenSCAD to
-[`skills/openscad-authoring/`](https://github.com/CameronBrooks11/partspec/tree/main/skills/openscad-authoring),
+[`skills/openscad-authoring/`](https://github.com/heibench/partspec/tree/main/skills/openscad-authoring),
 build123d and CadQuery to
-[`skills/build123d-authoring/`](https://github.com/CameronBrooks11/partspec/tree/main/skills/build123d-authoring)
+[`skills/build123d-authoring/`](https://github.com/heibench/partspec/tree/main/skills/build123d-authoring)
 — the Python engines fail by selection drift where OpenSCAD fails by silent geometry loss,
 so the two sets do not transfer.
 Worked exemplars beyond the spacer live in
-[`examples/`](https://github.com/CameronBrooks11/partspec/tree/main/examples) — a cited
+[`examples/`](https://github.com/heibench/partspec/tree/main/examples) — a cited
 NEMA 17 bracket, a two-engine bearing-seat family, a sealed enclosure — each with a README
 saying what to imitate and why.
 
@@ -355,16 +355,16 @@ wrote is a check nobody decided.
 **If the author is an AI agent, `partspec` is the gate at the end of its loop.** The
 authoring session owns making the part; `partspec` proves the result against intent the
 model does not contain, and persists the proof — that boundary is
-[D18](https://github.com/CameronBrooks11/partspec/blob/main/docs/DECISIONS.md). The `mcp`
+[D18](https://github.com/heibench/partspec/blob/main/docs/DECISIONS.md). The `mcp`
 extra puts the gate in the agent's tool list: `check` returns the same report the CLI
 writes, `measure`, `render` and `vdiff` the same output as their verbs, every call a
 fresh stateless evaluation. And the loop is measured, not assumed: in the seeded-defect eval suite
-([`evals/`](https://github.com/CameronBrooks11/partspec/tree/main/evals)), an agent shown
+([`evals/`](https://github.com/heibench/partspec/tree/main/evals)), an agent shown
 only the report — no shell, no hints, contract frozen — repaired all five defect classes in
 a single edit each, without once weakening its contract. The rules of that loop — bounded
 attempts, what each exit code instructs, greppable escalation, and the guards watching the
 weakening moves — are
-[`docs/AGENT-CONTRACT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/AGENT-CONTRACT.md).
+[`docs/AGENT-CONTRACT.md`](https://github.com/heibench/partspec/blob/main/docs/AGENT-CONTRACT.md).
 
 ## The idea it is built around
 
@@ -406,7 +406,7 @@ counting through and counting across disagree, makes it refuse. An unnecessary
 
 ## Documentation
 
-Start at [`docs/README.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/README.md),
+Start at [`docs/README.md`](https://github.com/heibench/partspec/blob/main/docs/README.md),
 which routes by what you are trying to do. **These documents install with the package** —
 `partspec --docs` prints the directory holding `docs/` and `skills/`, so an agent working
 from an install reads them without the network. Citations pointing outside those two trees
@@ -414,20 +414,20 @@ from an install reads them without the network. Citations pointing outside those
 of which the four `SPEC-*` documents are normative and were written before the
 implementation:
 
-- [`docs/AGENT-CONTRACT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/AGENT-CONTRACT.md) — how to drive the tool: read the
+- [`docs/AGENT-CONTRACT.md`](https://github.com/heibench/partspec/blob/main/docs/AGENT-CONTRACT.md) — how to drive the tool: read the
   report, not the console, and what each exit code obliges you to do.
-- [`docs/SPEC-report.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/SPEC-report.md) — the report schema and exit codes. This is
+- [`docs/SPEC-report.md`](https://github.com/heibench/partspec/blob/main/docs/SPEC-report.md) — the report schema and exit codes. This is
   the actual contract; the CLI verbs are not.
-- [`docs/SPEC-contract.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/SPEC-contract.md) — the Python contract API and check
+- [`docs/SPEC-contract.md`](https://github.com/heibench/partspec/blob/main/docs/SPEC-contract.md) — the Python contract API and check
   vocabulary.
-- [`docs/SPEC-backend.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/SPEC-backend.md) — the geometry backend protocol.
-- [`docs/SPEC-diff.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/SPEC-diff.md) — the semantic report comparator.
-- [`docs/LINT.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/LINT.md) — the advisory source rules and their tiers.
-- [`docs/FAILURE-MODES.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/FAILURE-MODES.md) — the observed CAD-as-code failure catalogue: what wrong parts look like when they're green.
-- [`docs/DECISIONS.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/DECISIONS.md) — every design decision, with its reasoning.
-- [`docs/PLAN.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/PLAN.md) — **historical**: how v0 was built and what was
+- [`docs/SPEC-backend.md`](https://github.com/heibench/partspec/blob/main/docs/SPEC-backend.md) — the geometry backend protocol.
+- [`docs/SPEC-diff.md`](https://github.com/heibench/partspec/blob/main/docs/SPEC-diff.md) — the semantic report comparator.
+- [`docs/LINT.md`](https://github.com/heibench/partspec/blob/main/docs/LINT.md) — the advisory source rules and their tiers.
+- [`docs/FAILURE-MODES.md`](https://github.com/heibench/partspec/blob/main/docs/FAILURE-MODES.md) — the observed CAD-as-code failure catalogue: what wrong parts look like when they're green.
+- [`docs/DECISIONS.md`](https://github.com/heibench/partspec/blob/main/docs/DECISIONS.md) — every design decision, with its reasoning.
+- [`docs/PLAN.md`](https://github.com/heibench/partspec/blob/main/docs/PLAN.md) — **historical**: how v0 was built and what was
   known then, not what the tool does now.
-- [`docs/POST-V0.md`](https://github.com/CameronBrooks11/partspec/blob/main/docs/POST-V0.md) — what is deliberately not here yet, and why.
+- [`docs/POST-V0.md`](https://github.com/heibench/partspec/blob/main/docs/POST-V0.md) — what is deliberately not here yet, and why.
 
 ## Prior art
 
@@ -439,7 +439,7 @@ packaging, and its `-D` parameter-passing approach is adopted directly.
 [build123d-mcp](https://github.com/pzfreo/build123d-mcp) is the complement on the authoring
 side — a stateful interactive session an agent designs *in*; `partspec` is the stateless
 gate the result must pass, and deliberately does not own that loop
-([D18](https://github.com/CameronBrooks11/partspec/blob/main/docs/DECISIONS.md)).
+([D18](https://github.com/heibench/partspec/blob/main/docs/DECISIONS.md)).
 [sca2d](https://gitlab.com/bath_open_instrumentation_group/sca2d) (GPLv3) is the
 `.scad`-side static analyser — scoping and style, no geometry — and FreeCAD's
 [importCSG](https://github.com/FreeCAD/FreeCAD/blob/main/src/Mod/OpenSCAD/importCSG.py)

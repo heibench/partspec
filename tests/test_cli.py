@@ -2553,7 +2553,7 @@ def test_a_copy_carrying_no_documents_refuses_rather_than_naming_the_url_as_a_pa
     assert main(["--docs"]) == exit_code(Verdict.ERROR)
     captured = capsys.readouterr()
     assert captured.out == "", f"stdout must stay empty, got {captured.out!r}"
-    assert "https://github.com/CameronBrooks11/partspec" in captured.err
+    assert "https://github.com/heibench/partspec" in captured.err
 
 
 def test_the_locator_refuses_a_tree_that_holds_only_half_the_corpus(tmp_path: Path):

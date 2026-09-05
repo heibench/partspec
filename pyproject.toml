@@ -42,10 +42,10 @@ partspec = "partspec.cli:main"
 partspec-mcp = "partspec.mcp:main"
 
 [project.urls]
-Repository = "https://github.com/CameronBrooks11/partspec"
-Issues = "https://github.com/CameronBrooks11/partspec/issues"
-Changelog = "https://github.com/CameronBrooks11/partspec/blob/main/CHANGELOG.md"
-Documentation = "https://github.com/CameronBrooks11/partspec/tree/main/docs"
+Repository = "https://github.com/heibench/partspec"
+Issues = "https://github.com/heibench/partspec/issues"
+Changelog = "https://github.com/heibench/partspec/blob/main/CHANGELOG.md"
+Documentation = "https://github.com/heibench/partspec/tree/main/docs"
 
 [build-system]
 requires = ["hatchling"]

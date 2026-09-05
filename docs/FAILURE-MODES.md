@@ -403,5 +403,5 @@ entries have.
 *Cross-references from the authoring skills (#22, #23) land with those skills; each
 entry above carries a stable heading for them to anchor to.*
 
-[dogfood-results]: https://github.com/CameronBrooks11/partspec/blob/main/notes/dogfood-results.md
-[notes]: https://github.com/CameronBrooks11/partspec/tree/main/notes
+[dogfood-results]: https://github.com/heibench/partspec/blob/main/notes/dogfood-results.md
+[notes]: https://github.com/heibench/partspec/tree/main/notes

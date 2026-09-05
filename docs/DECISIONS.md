@@ -161,7 +161,7 @@ instead.
 ## D9 — Name: `partspec`
 
 **Availability, checked 2026-08-02:** `partspec`, `part-spec`, `py-partspec` all free on
-PyPI; free on npm; `CameronBrooks11/partspec` free. (`cadman`, `cadcheck`, `cadspec`,
+PyPI; free on npm; `heibench/partspec` free. (`cadman`, `cadcheck`, `cadspec`,
 `geocheck` were also free; `fitcheck` was taken.)
 
 **Minor collision, non-blocking:** four small unrelated GitHub repos are named
@@ -624,5 +624,5 @@ regions (#49); and `diff`, closing the known contract-weakening gap (`POST-V0.md
 Renders stay evidence (D18). Assemblies begin after that proves out, with `POST-V0.md` §1
 as the design basis.
 
-[survey-direction]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/DIRECTION.md
-[research]: https://github.com/CameronBrooks11/partspec/blob/main/notes/RESEARCH.md
+[survey-direction]: https://github.com/heibench/partspec/blob/main/notes/survey/DIRECTION.md
+[research]: https://github.com/heibench/partspec/blob/main/notes/RESEARCH.md

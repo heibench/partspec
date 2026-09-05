@@ -42,7 +42,7 @@ consumed by parsing, never by evaluation.
 ## Reporting a vulnerability
 
 Report privately through GitHub:
-<https://github.com/CameronBrooks11/partspec/security/advisories/new>
+<https://github.com/heibench/partspec/security/advisories/new>
 
 Please do not open a public issue for a security report.
 

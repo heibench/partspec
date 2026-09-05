@@ -1435,7 +1435,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   rather than assumed to be following it". `mcp.py`'s `_INSTRUCTIONS` said none
   of it, and carried no pointer to any partspec document.
   Measured, that gap is total for this consumer:
-  `grep -rn "github.com/CameronBrooks11/partspec" src/` returns **one** hit,
+  `grep -rn "github.com/heibench/partspec" src/` returns **one** hit,
   `cli.py`'s epilog, which an MCP client never sees — it has a tool list and
   nothing else. `_INSTRUCTIONS` now names the four tools as the whole surface,
   says which flags and verbs are CLI-only and that the pin-and-compare remedy
@@ -1804,9 +1804,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **The eval harness stops calling a file "lint-clean" when three rules never
   looked at it** (#317, epic #305).
-  [`evals/run.py`](https://github.com/CameronBrooks11/partspec/blob/main/evals/run.py)
+  [`evals/run.py`](https://github.com/heibench/partspec/blob/main/evals/run.py)
   branched on `counts.findings` alone and
-  [`evals/AUTHORING.md`](https://github.com/CameronBrooks11/partspec/blob/main/evals/AUTHORING.md)
+  [`evals/AUTHORING.md`](https://github.com/heibench/partspec/blob/main/evals/AUTHORING.md)
   reported that as "trials lint-clean" — the blind loop `docs/LINT.md` names in
   its own words: "a `findings: 0` with `unsupported: 3` is not a clean file".
   A trial on a machine with no OpenSCAD, or over a source whose `.csg` export
@@ -1868,7 +1868,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   absolute path is what runs and what the header records. A path that exists
   but is not executable now says so rather than reporting "not found".
   `PARTSPEC_BIN` was documented nowhere;
-  [`evals/README.md`](https://github.com/CameronBrooks11/partspec/blob/main/evals/README.md)
+  [`evals/README.md`](https://github.com/heibench/partspec/blob/main/evals/README.md)
   documents it now.
 
 - **`AGENTS.md`'s layout tree is generated, so it can neither miss a module nor
@@ -4467,23 +4467,23 @@ callouts, and reports become comparable.
   `measure` and `render` carry the same engine provenance as `check`; the OpenSCAD method
   scratch moved out of the source tree.
 
-[authoring-evals]: https://github.com/CameronBrooks11/partspec/blob/main/evals/AUTHORING.md
-[convergence-evals]: https://github.com/CameronBrooks11/partspec/blob/main/evals/CONVERGENCE.md
-[dogfood-results]: https://github.com/CameronBrooks11/partspec/blob/main/notes/dogfood-results.md
+[authoring-evals]: https://github.com/heibench/partspec/blob/main/evals/AUTHORING.md
+[convergence-evals]: https://github.com/heibench/partspec/blob/main/evals/CONVERGENCE.md
+[dogfood-results]: https://github.com/heibench/partspec/blob/main/notes/dogfood-results.md
 
-[Unreleased]: https://github.com/CameronBrooks11/partspec/compare/v0.7.8...HEAD
-[0.7.8]: https://github.com/CameronBrooks11/partspec/compare/v0.7.7...v0.7.8
-[0.7.7]: https://github.com/CameronBrooks11/partspec/compare/v0.7.6...v0.7.7
-[0.7.6]: https://github.com/CameronBrooks11/partspec/compare/v0.7.5...v0.7.6
-[0.7.5]: https://github.com/CameronBrooks11/partspec/compare/v0.7.4...v0.7.5
-[0.7.4]: https://github.com/CameronBrooks11/partspec/compare/v0.7.3...v0.7.4
-[0.7.3]: https://github.com/CameronBrooks11/partspec/compare/v0.7.2...v0.7.3
-[0.7.2]: https://github.com/CameronBrooks11/partspec/compare/v0.7.1...v0.7.2
-[0.7.1]: https://github.com/CameronBrooks11/partspec/compare/v0.7.0...v0.7.1
-[0.7.0]: https://github.com/CameronBrooks11/partspec/compare/v0.6.0...v0.7.0
-[0.6.0]: https://github.com/CameronBrooks11/partspec/compare/v0.5.0...v0.6.0
-[0.5.0]: https://github.com/CameronBrooks11/partspec/compare/v0.4.0...v0.5.0
-[0.4.0]: https://github.com/CameronBrooks11/partspec/compare/v0.3.0...v0.4.0
-[0.3.0]: https://github.com/CameronBrooks11/partspec/compare/v0.2.0...v0.3.0
-[0.2.0]: https://github.com/CameronBrooks11/partspec/compare/v0.1.0...v0.2.0
-[0.1.0]: https://github.com/CameronBrooks11/partspec/releases/tag/v0.1.0
+[Unreleased]: https://github.com/heibench/partspec/compare/v0.7.8...HEAD
+[0.7.8]: https://github.com/heibench/partspec/compare/v0.7.7...v0.7.8
+[0.7.7]: https://github.com/heibench/partspec/compare/v0.7.6...v0.7.7
+[0.7.6]: https://github.com/heibench/partspec/compare/v0.7.5...v0.7.6
+[0.7.5]: https://github.com/heibench/partspec/compare/v0.7.4...v0.7.5
+[0.7.4]: https://github.com/heibench/partspec/compare/v0.7.3...v0.7.4
+[0.7.3]: https://github.com/heibench/partspec/compare/v0.7.2...v0.7.3
+[0.7.2]: https://github.com/heibench/partspec/compare/v0.7.1...v0.7.2
+[0.7.1]: https://github.com/heibench/partspec/compare/v0.7.0...v0.7.1
+[0.7.0]: https://github.com/heibench/partspec/compare/v0.6.0...v0.7.0
+[0.6.0]: https://github.com/heibench/partspec/compare/v0.5.0...v0.6.0
+[0.5.0]: https://github.com/heibench/partspec/compare/v0.4.0...v0.5.0
+[0.4.0]: https://github.com/heibench/partspec/compare/v0.3.0...v0.4.0
+[0.3.0]: https://github.com/heibench/partspec/compare/v0.2.0...v0.3.0
+[0.2.0]: https://github.com/heibench/partspec/compare/v0.1.0...v0.2.0
+[0.1.0]: https://github.com/heibench/partspec/releases/tag/v0.1.0

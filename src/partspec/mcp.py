@@ -79,7 +79,7 @@ with the package: `partspec --docs`, in a shell, prints the directory holding
 them — `docs/AGENT-CONTRACT.md` and `skills/contract-authoring/SKILL.md` are
 underneath it (#349). An MCP client has a tool list
 and nothing else, so this paragraph is the only place it can learn that. They
-are also at https://github.com/CameronBrooks11/partspec/tree/main/docs
+are also at https://github.com/heibench/partspec/tree/main/docs
 """
 
 

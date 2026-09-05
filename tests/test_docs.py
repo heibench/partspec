@@ -799,7 +799,7 @@ def test_every_repo_url_the_docs_link_to_can_be_opened():
             ["git", "ls-files"], cwd=ROOT, capture_output=True, text=True, check=True
         ).stdout.split()
     )
-    url = re.compile(r"https://github\.com/CameronBrooks11/partspec/(?:blob|tree)/main/([\w./-]+)")
+    url = re.compile(r"https://github\.com/heibench/partspec/(?:blob|tree)/main/([\w./-]+)")
     missing = []
     for doc in shipped_markdown():
         for cited in url.findall(prose_of(doc.read_text())):

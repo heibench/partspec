@@ -1704,4 +1704,4 @@ No new machinery — a fragment is ordinary contract authoring, factored. Three 
    directly — the review caught it against the standard's own text, and the table now
    converts what the document says, inch figures in every note.
 
-[survey-direction]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/DIRECTION.md
+[survey-direction]: https://github.com/heibench/partspec/blob/main/notes/survey/DIRECTION.md

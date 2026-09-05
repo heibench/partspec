@@ -1551,4 +1551,4 @@ the unit table. See `SPEC-contract.md` §5.
 (§7.1), not left to `detail`: prose is for humans, and the failing axis is data an agent
 acts on.
 
-[survey-capability]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/04-kernel-capability.md
+[survey-capability]: https://github.com/heibench/partspec/blob/main/notes/survey/04-kernel-capability.md

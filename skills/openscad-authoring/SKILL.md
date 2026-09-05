@@ -336,4 +336,4 @@ none of the rules above transfer — those engines fail by silent *selection* dr
 ecosystem breakage rather than by silent geometry loss. Load
 `skills/build123d-authoring/SKILL.md` instead.
 
-[gaps]: https://github.com/CameronBrooks11/partspec/blob/main/notes/GAPS.md
+[gaps]: https://github.com/heibench/partspec/blob/main/notes/GAPS.md

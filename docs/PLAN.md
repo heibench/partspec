@@ -335,4 +335,4 @@ beyond it. What is well established is the negative claim, and it is the one the
 line turns on: **a part that renders cleanly, exits 0 and looks right is not thereby
 correct**, and four of the five findings above were found no other way.
 
-[survey-direction]: https://github.com/CameronBrooks11/partspec/blob/main/notes/survey/DIRECTION.md
+[survey-direction]: https://github.com/heibench/partspec/blob/main/notes/survey/DIRECTION.md
