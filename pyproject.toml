@@ -32,6 +32,21 @@ occt = ["build123d>=0.11,<0.12"]
 # it is the VTK-enabled superset both engines can share; see [tool.uv] below for
 # why that matters and `partspec.engines.pycad` for what happens when the
 # environment gets it wrong anyway.
+#
+# `cadquery-ocp` carries NO upper bound, and that is deliberate (#386). CadQuery
+# is what decides which OCP major is safe, because CadQuery is the thing built
+# against it: `cadquery 2.8.0` requires `cadquery-ocp<8.0,>=7.9.3.1`, and that
+# cap is what keeps `8.0.1.0.0` (published 2026-09-05) out of the solve. Adding
+# `<8` here would restate that cap without tightening it — measured with
+# `uv pip install --dry-run --no-config -e '.[cadquery]'`, the extra resolves
+# `cadquery-ocp==7.9.3.1.1` on 3.12 and on 3.13, and resolves identically with
+# `<8` added AND with the requirement deleted outright. What it would add is a
+# bound that goes stale the day CadQuery moves major — and a stale OCP cap does
+# not error, it backtracks in silence: on 3.12, `cadquery>=2.6,<3` with
+# `cadquery-ocp>=7.8,<7.9` resolves `cadquery==2.7.0` at exit 0. #386's own
+# failure was OCP 8 landing over a CadQuery built for 7.9, and no bound here
+# could have stopped it — the `--no-deps` re-assert that did it reads no
+# requirement in this file at all (fixed in #387, in the justfile).
 cadquery = ["cadquery>=2.8,<3", "build123d>=0.11,<0.12", "cadquery-ocp>=7.8"]
 # The MCP adapter (D18): stateless tools over check/measure/render/vdiff, stdio transport.
 # Not an engine — pairs with whichever engine extras the parts need.
