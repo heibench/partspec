@@ -7,6 +7,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **`measure` says whether a refusal was the part's doing or partspec's** (#371).
+  `refused` carried both "the part defeated this measurement" and "partspec could
+  not perform it" as prose in one `dict[str, str]`, so telling a defect in the
+  design from a bug in this tool meant string-matching English. A new
+  `refused_by` block maps each refused name to `"part"` or `"tool"`. Additive:
+  `refused` keeps its value type, so a consumer written before this is unaffected
+  (SPEC-report 7.1).
+
+### Changed
+
+- **A backend that raises while measuring now exits `4`** (#371). It exited `0`,
+  which asserted the run was fine while the failure sat in a block whose other
+  entries mean "the part's defect" -- a fault in this tool reading as a statement
+  about the part. The payload is still emitted in full, so #369's property holds
+  unchanged: one raising backend costs one name and not the other thirteen. A
+  part that merely defeats a measurement still exits `0`, because that is an
+  answer about the part and `measure` decides nothing about parts.
+
+  This is a new state for a consumer: exit `4` with a complete payload. It is
+  distinguishable from the failure shape at a glance -- that one carries `error`
+  and no `measurements`, this one the reverse -- and `docs/AGENT-CONTRACT.md`
+  2.4 now says so.
+
 ### Fixed
 
 - **`measure` and `render` no longer answer off a part the engine built without
