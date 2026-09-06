@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-06
+
 ### Added
 
 - **`measure` says whether a refusal was the part's doing or partspec's** (#371).
@@ -4513,7 +4515,8 @@ callouts, and reports become comparable.
 [convergence-evals]: https://github.com/heibench/partspec/blob/main/evals/CONVERGENCE.md
 [dogfood-results]: https://github.com/heibench/partspec/blob/main/notes/dogfood-results.md
 
-[Unreleased]: https://github.com/heibench/partspec/compare/v0.7.8...HEAD
+[Unreleased]: https://github.com/heibench/partspec/compare/v0.8.0...HEAD
+[0.8.0]: https://github.com/heibench/partspec/compare/v0.7.8...v0.8.0
 [0.7.8]: https://github.com/heibench/partspec/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/heibench/partspec/compare/v0.7.6...v0.7.7
 [0.7.6]: https://github.com/heibench/partspec/compare/v0.7.5...v0.7.6
