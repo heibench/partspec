@@ -1399,6 +1399,27 @@ def _display_failure(returncode: int, stderr: str) -> bool:
     return returncode in (139, -11)
 
 
+def _absent_input_views(absent: list[str]) -> BuildError:
+    """`render` refusing a part the engine built without a file it asked for.
+
+    Cause and hint come from `runner`, which `check` and `measure` read too: one
+    engine fact, one diagnosis, whichever verb met it (#308's rule, #355). What is
+    local here is that the output is pictures -- `render`'s payload records an
+    `origin`, and `None` is the honest one, since whether the path is a typo or
+    the file has not been generated yet is not something partspec can tell
+    (SPEC-report §6.1).
+    """
+    from ..runner import _ABSENT_INPUT_CAUSE, _ABSENT_INPUT_HINT
+
+    detail = (
+        f"{_ABSENT_INPUT_CAUSE}, so these would be pictures of something other "
+        f"than what this source describes: {absent[0]}"
+    )
+    if len(absent) > 1:
+        detail += f" (and {len(absent) - 1} more)"
+    return BuildError(detail, hint=_ABSENT_INPUT_HINT, origin=None)
+
+
 def _hollowed_views(first_line: str) -> BuildError:
     """`render` refusing to draw a part the engine built out of something it lost.
 
@@ -1520,6 +1541,22 @@ def render_views(
         # A picture is the one output a reader trusts without checking, which
         # is why `render` could not keep the exemption #286 gave it.
         return _hollowed_views(unresolved[0])
+    if stl_deps:
+        # The same refusal through the other channel (#309, #355). A file the
+        # engine asked for and could not open emits no stderr marker -- an
+        # absent `import()` target renders as nothing -- so `unresolved` above is
+        # empty and the STL is well-formed. `check` refuses this at exit 4 while
+        # `render` wrote four PNGs of a part missing a piece.
+        #
+        # Here for the reason the guard above is here, in as many words: below
+        # this point the views are rendered and moved as a batch, so a refusal
+        # asked later leaves four pictures of the wrong part on disk. A picture
+        # is the one output a reader trusts without checking.
+        from ..runner import absent_build_inputs
+
+        absent = absent_build_inputs(source, stl_deps[-1], out_dir, timeout_s, source.path)
+        if absent:
+            return _absent_input_views(absent)
     closure = include_closure(source.path)
     executable = find_executable()
     assert executable is not None  # render() just used it

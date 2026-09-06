@@ -548,6 +548,31 @@ def _hollowed_measurements(first_line: str) -> BuildError:
     )
 
 
+def _absent_input_refusal(absent: list[str]) -> BuildError:
+    """`measure` or `render` refusing a part built without a file it asked for.
+
+    The cause and the hint come from `runner`, which `check` reads too: one
+    engine fact must not be described differently depending on the verb (#308's
+    rule, #355). What is local here is the middle clause -- there is no report on
+    these paths to be wrong, only numbers and pictures that would be taken off
+    the wrong part.
+
+    `origin=None` deliberately. Whether the path is a typo or the file simply has
+    not been generated yet is not something partspec can tell, so neither "model"
+    nor "environment" may be asserted (SPEC-report §6.1) -- the same answer
+    `check` gives by leaving `build_origin` null.
+    """
+    from .runner import _ABSENT_INPUT_CAUSE, _ABSENT_INPUT_HINT
+
+    detail = (
+        f"{_ABSENT_INPUT_CAUSE}, so these would be measurements of something "
+        f"other than what this source describes: {absent[0]}"
+    )
+    if len(absent) > 1:
+        detail += f" (and {len(absent) - 1} more)"
+    return BuildError(detail, hint=_ABSENT_INPUT_HINT, origin=None)
+
+
 def _build_to_file(
     backend: Any,
     source: Any,
@@ -678,6 +703,26 @@ def _build_to_file(
                 # engines; this one still fires whenever the destination is
                 # fine, which is every other case.
                 return _hollowed_measurements(unresolved_out[0])
+            if deps_out:
+                # #286's failure through the other channel (#309, #355). The build
+                # SUCCEEDED and the depfile is complete, so `unresolved_out` above
+                # is empty by construction -- the engine had nothing to complain
+                # about. What it could not open is visible only in the depfile, and
+                # an `import()` of an absent target renders as nothing, so the mesh
+                # is well-formed and it is not the part.
+                #
+                # Here rather than in the caller, and before the rename, for the
+                # same reason as the two guards above: a refusal must leave `dest`
+                # exactly as the caller left it. `check` refuses this at exit 4
+                # while `measure` returned a number an agent would write into a
+                # contract that then passes forever.
+                from .runner import absent_build_inputs
+
+                absent = absent_build_inputs(
+                    source, deps_out[-1], Path(scratch), timeout_s, source.path
+                )
+                if absent:
+                    return _absent_input_refusal(absent)
             (Path(scratch) / f"{source.path.stem}{ARTIFACT_SUFFIX}").replace(dest)
             return built
     except OSError as exc:
@@ -1488,8 +1533,10 @@ def _measure_resolved(
             _measure_failure(part, target, backend, dest_refusal[0].message, dest_refusal[0].hint)
             return EXIT_USAGE
         written_to = dest
+        build_dir = dest.parent
     else:
         out = _out_dir(args.target, Path(args.out) if args.out is not None else None)
+        build_dir = out
         artifact = backend.build(
             source,
             out,
@@ -1517,6 +1564,22 @@ def _measure_resolved(
         # HONESTLY produce, and these do not qualify (#286). The `--out FILE`
         # form has already refused inside `_build_to_file`, before its rename.
         artifact = _hollowed_measurements(engine_unresolved[0])
+    elif engine_deps and not isinstance(artifact, BuildError):
+        # The same hazard through the other channel (#309, #355). A file the
+        # engine asked for and could not open leaves no stderr marker at all --
+        # `import()` of an absent target renders as nothing -- so `unresolved`
+        # above is empty and the mesh is well-formed. `check` refuses this at
+        # exit 4; `measure` reported a number off a part that is missing a piece,
+        # and an agent writes that number into a contract that passes forever.
+        #
+        # Reached only by the directory form: the `--out FILE` form has already
+        # refused inside `_build_to_file`, before its rename, because a refusal
+        # there must leave the caller's file untouched.
+        from .runner import absent_build_inputs
+
+        absent = absent_build_inputs(source, engine_deps[-1], build_dir, timeout_s, source.path)
+        if absent:
+            artifact = _absent_input_refusal(absent)
     if isinstance(artifact, BuildError):
         _measure_failure(part, target, backend, artifact.message, artifact.hint)
         return exit_code(Verdict.ERROR)

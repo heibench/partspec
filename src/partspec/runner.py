@@ -367,14 +367,9 @@ def _evaluate(
         # it actually opened, which is the one thing no static reader can know.
         report.source_closure = _closure(part.source, engine_deps[0])
 
-        unexported = _only_in_dropped_subtrees(
-            _engine_source(part), engine_deps[0].missing, out_dir, timeout_s
+        absent = absent_build_inputs(
+            _engine_source(part), engine_deps[0], out_dir, timeout_s, part.source.path
         )
-        absent = [
-            _relative(f, part.source.path) or f.name
-            for f in engine_deps[0].missing
-            if f not in unexported
-        ]
         if absent:
             # The build SUCCEEDED, the depfile is `complete` -- a success-path
             # read is never anything else -- and the complete answer is that a
@@ -1782,6 +1777,36 @@ def _only_in_dropped_subtrees(
     # else. A file referenced from both is a build input, and an entry matching
     # neither set is unaccounted for and stays refused.
     return {f for f in missing if f in dropped_paths and f not in kept_paths}
+
+
+def absent_build_inputs(
+    engine_source: Any,
+    deps: Any,
+    out_dir: Path,
+    timeout_s: float | None,
+    relative_to: Path,
+) -> list[str]:
+    """Build inputs the engine asked for, could not open, and did not exclude.
+
+    Shared by `check`, `measure` and `render` so one engine fact is not diagnosed
+    three ways depending on the verb (#308's rule, #355).
+
+    **The filter is the load-bearing half, not a refinement.** OpenSCAD evaluates
+    a `%`-ed subtree, so an absent file inside one reaches the depfile exactly as
+    a real dependency does -- `.missing` alone cannot tell them apart. Refusing on
+    it would refuse a correct part, which is what `_only_in_dropped_subtrees`
+    exists to prevent (#354 review, B1). Measured: `cube(...); %import("gone.stl");`
+    and `cube(...); import("gone.stl");` produce identical `missing` entries, and
+    only the second is a fault.
+
+    Costs nothing on the ordinary path: `_only_in_dropped_subtrees` returns
+    immediately when there is nothing missing, so the extra engine pass is paid
+    only where a build input is already known to be absent.
+    """
+    if not deps.missing:
+        return []
+    unexported = _only_in_dropped_subtrees(engine_source, deps.missing, out_dir, timeout_s)
+    return sorted(_relative(f, relative_to) or f.name for f in deps.missing if f not in unexported)
 
 
 _ABSENT_INPUT_CAUSE = (

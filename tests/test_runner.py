@@ -1893,3 +1893,81 @@ def test_a_method_scratch_that_failed_refuses_rather_than_exporting_the_bare_fil
     assert _only_in_dropped_subtrees(wrapped, missing, out, None) == set(), (
         "no usable entry is no evidence; falling back to source.path fails OPEN"
     )
+
+
+# -- one engine fact, one diagnosis, whichever verb meets it (#355) ---------------------
+
+
+def _verb_target(tmp_path: Path, body: str, name: str) -> str:
+    (tmp_path / f"{name}.scad").write_text(body)
+    spec = tmp_path / f"spec_{name}.py"
+    spec.write_text(
+        "from partspec import Part, openscad\n\n\ndef make():\n"
+        f"    return Part({name!r}, openscad({name + '.scad'!r}))\n"
+    )
+    return f"{spec}:make"
+
+
+@needs_scad_tier
+@pytest.mark.parametrize(
+    ("name", "body", "refuses"), _MODIFIER_SHAPES, ids=[s[0] for s in _MODIFIER_SHAPES]
+)
+def test_measure_refuses_exactly_what_check_refuses(
+    tmp_path: Path, name: str, body: str, refuses: bool
+):
+    """`measure` was the hazard, not `check`.
+
+    A number taken off a part that is missing a piece gets written into a
+    contract, and that contract then passes forever (#286, #309). Before #355
+    `check` exited 4 here while `measure` exited 0 and printed the volume of a
+    bare plate.
+
+    The `%`/`*` rows are the half a naive fix gets wrong: those files reach
+    `engine_inputs.missing` exactly as a real dependency does, so refusing on
+    that field alone refuses a correct part.
+    """
+    from partspec.cli import main
+
+    code = main(["measure", _verb_target(tmp_path, body, f"m_{name}")])
+    if refuses:
+        assert code == 4, "measure must not answer off a part missing a build input"
+    else:
+        assert code == 0, "the export does not depend on this file; refusing it is a false red"
+
+
+@needs_scad_tier
+@pytest.mark.parametrize(
+    ("name", "body", "refuses"), _MODIFIER_SHAPES, ids=[s[0] for s in _MODIFIER_SHAPES]
+)
+def test_render_refuses_exactly_what_check_refuses(
+    tmp_path: Path, name: str, body: str, refuses: bool
+):
+    """A picture is the one output a reader trusts without checking (#307)."""
+    from partspec.cli import main
+
+    out = tmp_path / f"out_{name}"
+    code = main(["render", _verb_target(tmp_path, body, f"r_{name}"), "--out", str(out)])
+    pngs = list(out.rglob("*.png"))
+    if refuses:
+        assert code == 4, "render must not draw a part missing a build input"
+        assert not pngs, "the refusal must land before any view moves"
+    else:
+        assert code == 0
+        assert pngs, "a dropped subtree is not a missing input; this part is renderable"
+
+
+@needs_scad_tier
+def test_the_three_verbs_give_one_diagnosis_for_one_engine_fact(tmp_path: Path):
+    """#308's rule. The cause and the hint are shared, so a reader who met this
+    through one verb recognises it through another."""
+    from partspec.cli import _absent_input_refusal
+    from partspec.engines.openscad import _absent_input_views
+    from partspec.runner import _ABSENT_INPUT_CAUSE, _ABSENT_INPUT_HINT
+
+    for refusal in (_absent_input_refusal(["gone.stl"]), _absent_input_views(["gone.stl"])):
+        assert refusal.message.startswith(_ABSENT_INPUT_CAUSE)
+        assert refusal.hint == _ABSENT_INPUT_HINT
+        assert refusal.origin is None, (
+            "a typo and a not-yet-generated file are indistinguishable here, "
+            "so neither 'model' nor 'environment' may be claimed"
+        )

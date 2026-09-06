@@ -494,11 +494,17 @@ given.
 
 **A sibling payload that refuses for one of these reasons attributes it the same way.**
 `measure` and `render` produce no verdict, so they carry the refusal as their own
-`error`/`hint` and exit `4`. This holds today for the first two arrivals — a name that did
-not resolve and a value that was defaulted, which share one stderr signal. The third is
-`check`-only so far: `measure` and `render` do not yet read `engine_inputs.missing`, and
-until they do a reader MUST NOT infer one verb's answer from another's on that arrival
-(#355).
+`error`/`hint` and exit `4`. This holds for **all three** arrivals since #355: the first
+two share one stderr signal, and the third is read off `engine_inputs.missing`, which all
+three verbs now consult through one shared answer rather than each deriving its own. A
+reader may therefore rely on the three verbs agreeing about whether the engine built the
+part the source describes.
+
+That sharing is a requirement, not an implementation note. The narrowing the paragraph
+above demands — a `%`-ed subtree's absent file is not a build input — MUST be applied
+identically by every verb. A verb that refused on the unnarrowed `missing` would exit `4`
+on a part `check` passes, which is the same fault as the one being fixed with the sign
+reversed: a correct part reported as unmeasurable.
 
 `render` additionally publishes an `origin`, and on both arrivals it refuses for that
 field is `null` — a defaulted `"model"` would assert the very attribution the report
