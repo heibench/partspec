@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **`measure` and `render` no longer answer off a part the engine built without
+  a file it asked for** (#355). `check` has refused this since #354, but the fix
+  was scoped to `runner.py`, so the same part was still measured and still drawn:
+  `measure` printed the volume of a bare plate at exit `0` and `render` wrote
+  four PNGs of it. An `import()` of an absent target renders as nothing and emits
+  no stderr marker, so the mesh is well-formed and the existing guards — which key
+  on the engine's stderr — had nothing to see. All three verbs now refuse on one
+  shared answer (`runner.absent_build_inputs`) rather than each deriving its own.
+
+  The shared answer includes the narrowing, which is the half that matters: a file
+  named only from a `%` subtree reaches `engine_inputs.missing` exactly as a real
+  dependency does, so refusing on that field alone would exit `4` on a correct
+  part. `render` refuses before any view moves, and `measure`'s `--out FILE` form
+  before its rename, so neither disturbs what a previous run left.
+
 ## [0.7.8] - 2026-09-03
 
 ### Added
