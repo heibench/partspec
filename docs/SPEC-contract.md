@@ -1272,6 +1272,22 @@ and an unattributed pass is still a pass — of a weaker question. The run-level
 behind it are in the report as `attribution` (`SPEC-report.md` §7.1), because the report
 is the product surface and an agent consuming it over MCP never sees stderr.
 
+**A contract with no dimensional check at all is a third weakness, and this
+specification does not currently guard it.** Topological kinds are absolute and
+non-circular, so they never draw the warning above — but they also assert nothing about
+*size*. A contract of `watertight()` and `solid_count(1)` passes a part that came out at
+the wrong dimensions, and the engine has ways of producing exactly that: a value defaulted
+from `undef` yields a clean, watertight, single-solid mesh at a size nobody wrote down
+(#308, #332). Measured on both pinned engines, adding one `envelope` moves that
+reproduction from exit `0` to exit `1`, and a `max`-only envelope still misses the case
+where a loop's geometry vanished and the part came out *smaller* (#338).
+
+Stated here as a limitation rather than a rule, because the remedy is an authoring
+decision and not something the tool can make for the author — see the paragraph below on
+auto-generated checks, which applies with equal force. `skills/contract-authoring/SKILL.md`
+§5 carries the guidance and the measurements. `DIMENSIONAL_KINDS` above is the vocabulary
+a future guard would need if one is ever wanted; proposing it is out of scope here.
+
 **`partspec` MUST NOT auto-generate checks** from an existing part — not even as a
 convenience. A check the tool wrote is a check nobody decided, and a report full of them is
 vacuous green wearing a costume. `measure` (§7) exists precisely so that authoring a
