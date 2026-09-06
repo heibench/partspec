@@ -1436,9 +1436,14 @@ def _hollowed_views(first_line: str) -> BuildError:
     """
     from ..runner import _unresolved_diagnosis
 
-    cause, hint = _unresolved_diagnosis(first_line)
+    cause, hint, artifact_is_wrong = _unresolved_diagnosis(first_line)
+    # Hedged with the other three callers, from the one place that selects it (#375):
+    # a name that did not resolve and a value not usable as written both export
+    # byte-identically to a correct source on both pinned engines, so "would be" is a
+    # claim the evidence does not carry. The refusal stands regardless.
+    consequence = "would be" if artifact_is_wrong else "may be"
     return BuildError(
-        f"{cause}, so these would be views of something other than what this "
+        f"{cause}, so these {consequence} views of something other than what this "
         f"source describes: {first_line}",
         hint=hint,
         origin=None,

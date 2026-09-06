@@ -540,9 +540,14 @@ def _hollowed_measurements(first_line: str) -> BuildError:
     """
     from .runner import _unresolved_diagnosis
 
-    cause, hint = _unresolved_diagnosis(first_line)
+    cause, hint, artifact_is_wrong = _unresolved_diagnosis(first_line)
+    # "would be" against "may be": only the substituted-value cause supports the flat
+    # claim, and the other two export byte-identically to a correct source on both
+    # pinned engines (#375). The refusal is unchanged either way -- partspec cannot
+    # tell, which is the reason to refuse and not a reason to overstate.
+    consequence = "would be" if artifact_is_wrong else "may be"
     return BuildError(
-        f"{cause}, so these would be measurements of something other than what "
+        f"{cause}, so these {consequence} measurements of something other than what "
         f"this source describes: {first_line}",
         hint=hint,
     )
