@@ -1,6 +1,6 @@
 # SPEC — `partspec diff`
 
-**Applies to:** v0.7.8 — the release this text describes. The `Status:` line records when
+**Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
 **Status:** draft 7 · 2026-09-02 · §4 puts `payload` in this artifact, the discriminator
@@ -564,7 +564,7 @@ It does not change the outcome: an old report that predates the field still diff
   "payload": "diff",                // which artifact this is (SPEC-report.md §7.1),
                                     // in the same position as the other five. Additive,
                                     // so `schema_version` did not move for it (#345)
-  "tool": { "name": "partspec-diff", "version": "0.7.8" },
+  "tool": { "name": "partspec-diff", "version": "0.8.0" },
                                     // partspec's own version. `diff` has none of its own
                                     // and never has, so a sample showing one invites a
                                     // consumer to key on a number that will never appear.
