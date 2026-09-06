@@ -236,7 +236,60 @@ quantity the backend can honestly produce, with no verdict, so you can see the n
    copying step 1's output into a limit. That copy is the auto-generation the tool
    refuses to do for you, done by hand.
 
-## 5. Keep the loop honest
+## 5. Soundness checks assert no dimension, and that is the gap
+
+`watertight()` and `solid_count(1)` are the two claims everyone writes first, and a
+contract that stops there **cannot catch a part that came out the wrong size**. They
+assert the mesh is sound, not that it is the part you meant. A dimension defaulted from
+`undef` produces a clean, watertight, single-solid mesh at whatever size the engine
+substituted, and that contract passes it (#308, #332).
+
+Measured on both pinned engines, `o = undef; h = o + 1; linear_extrude(h) square([40,30]);`
+— a plate that is 100 mm tall because a name was undefined:
+
+| contract | verdict |
+|---|---|
+| `watertight()` + `solid_count(1)` | **exit 0** |
+| the same, plus `envelope(max=(40,30,6))` | **exit 1** |
+
+There is no guard coming for this. Every stderr and `.csg` signal that could refuse it
+refuses correct parts too — `o=undef; cube(o)` and `cube(1)` export byte-identical `.csg`
+files — so **the contract is the mechanism**, not a fallback for one. `partspec lint`
+flags the source shape as `scad-untested-undef`, advisory only.
+
+**Assert at least one dimension on every part.** An envelope is the cheapest; a `volume`
+range does the same work when the outline is irregular.
+
+### A one-sided envelope cannot catch geometry that vanished
+
+`envelope(max=...)` catches a part that grew. It does nothing about a part that
+**shrank**, and a loop or an `if` that silently produced nothing is exactly that case
+(#338).
+
+    module rail(n = undef) {
+      cube([40, 8, 6]);
+      for (i = [1 : n]) translate([i*8, 0, 6]) cube([6, 8, 4]);
+    }
+
+The loop contributes nothing when `n` is `undef`, and the part is a bare bar. Measured,
+both engines:
+
+| contract | `n = undef` | `n = 4` |
+|---|---|---|
+| `watertight()` + `solid_count(1)` | exit 0 | exit 0 |
+| `envelope(max=(40,30,10))` | **exit 0** | exit 0 |
+| `envelope(min=(40,8,10), max=(40,8,10))` | **exit 1** | exit 0 |
+
+**For anything built by a loop, a comprehension or an `if`, assert a lower bound too.**
+The upper bound alone says the part is not too big, which is not the failure that shape
+has.
+
+The OpenSCAD-side view of the same fault — which source shapes produce it, and how to
+write them so they cannot — is `skills/openscad-authoring/SKILL.md` rule 8. This section
+is the contract side, and it holds whatever engine the source declares: the Python tiers
+have their own ways of building a sound mesh of the wrong thing.
+
+## 6. Keep the loop honest
 
 - Pin the claim set once (`partspec check spec.py:part --pin claims.lock`, lock
   committed), then run with `--expect claims.lock` from that point on — `--expect` is
