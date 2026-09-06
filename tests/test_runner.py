@@ -1913,7 +1913,7 @@ def _verb_target(tmp_path: Path, body: str, name: str) -> str:
     ("name", "body", "refuses"), _MODIFIER_SHAPES, ids=[s[0] for s in _MODIFIER_SHAPES]
 )
 def test_measure_refuses_exactly_what_check_refuses(
-    tmp_path: Path, name: str, body: str, refuses: bool
+    tmp_path: Path, name: str, body: str, refuses: bool, capsys
 ):
     """`measure` was the hazard, not `check`.
 
@@ -1929,8 +1929,12 @@ def test_measure_refuses_exactly_what_check_refuses(
     from partspec.cli import main
 
     code = main(["measure", _verb_target(tmp_path, body, f"m_{name}")])
+    err = capsys.readouterr().err
     if refuses:
         assert code == 4, "measure must not answer off a part missing a build input"
+        assert "build input that is not on disk" in err, (
+            "the exit code alone would pass for any refusal; this asserts the reason"
+        )
     else:
         assert code == 0, "the export does not depend on this file; refusing it is a false red"
 
@@ -1940,16 +1944,28 @@ def test_measure_refuses_exactly_what_check_refuses(
     ("name", "body", "refuses"), _MODIFIER_SHAPES, ids=[s[0] for s in _MODIFIER_SHAPES]
 )
 def test_render_refuses_exactly_what_check_refuses(
-    tmp_path: Path, name: str, body: str, refuses: bool
+    tmp_path: Path, name: str, body: str, refuses: bool, capsys
 ):
-    """A picture is the one output a reader trusts without checking (#307)."""
+    """A picture is the one output a reader trusts without checking (#307).
+
+    Asserts the REASON, not just the code. On an engine with no offscreen path --
+    apt 2021.01 without a display, which is what CI's mesh-only job has -- every
+    row exits 4 for a reason that has nothing to do with this issue. Reading only
+    the code there would have passed the refusing rows for the wrong reason while
+    failing the others, which is how the first draft of this test behaved.
+    """
     from partspec.cli import main
 
     out = tmp_path / f"out_{name}"
     code = main(["render", _verb_target(tmp_path, body, f"r_{name}"), "--out", str(out)])
+    err = capsys.readouterr().err
+    if "without a display" in err:
+        pytest.skip("this OpenSCAD cannot render PNG here; the question is unanswerable")
+
     pngs = list(out.rglob("*.png"))
     if refuses:
         assert code == 4, "render must not draw a part missing a build input"
+        assert "build input that is not on disk" in err
         assert not pngs, "the refusal must land before any view moves"
     else:
         assert code == 0
