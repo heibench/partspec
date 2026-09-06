@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The consequence clause no longer asserts more than the evidence carries**
+  (#375). Four callers appended their own sentence after the cause, and three
+  said flatly that what was built is not the part. Measured on both pinned
+  engines, that is false for two of the three causes: `echo(nofunc(3));
+  cube([10,5,2]);` and `rotate([90,0,0,0]) cube([10,5,2]);` both export
+  byte-identical to a correct source, while a value the engine could not convert
+  really does build its own default. The strength is now selected once, beside
+  the cause, so the four sentences cannot drift apart -- hedging three and
+  leaving the fourth asserting would be the three-different-accounts outcome that
+  function exists to prevent. **The refusal is unchanged in every case**;
+  `docs/AGENT-CONTRACT.md` 2.3 catches up on both sentences that over-claimed.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added

@@ -1123,10 +1123,10 @@ def test_a_value_that_would_not_convert_gets_a_different_diagnosis_than_a_name()
     in either file and would be invisible on the path that stayed correct.
     Engine-free: `_unresolved_diagnosis` reads a string.
     """
-    name_cause, name_hint = _unresolved_diagnosis(
+    name_cause, name_hint, _ = _unresolved_diagnosis(
         "WARNING: Ignoring unknown module 'nope_module' in file q.scad, line 2"
     )
-    convert_cause, convert_hint = _unresolved_diagnosis(
+    convert_cause, convert_hint, _ = _unresolved_diagnosis(
         "WARNING: Unable to convert cube(size=[undef, 30, 6], ...) parameter to a"
         " number or a vec3 of numbers in file q.scad, line 2"
     )
@@ -1161,10 +1161,10 @@ def test_an_over_long_rotate_vector_is_not_diagnosed_as_a_substitution():
     actionable -- while the rotate line gets a cause that claims only what
     stderr supports. Engine-free: `_unresolved_diagnosis` reads a string.
     """
-    rotate_cause, rotate_hint = _unresolved_diagnosis(
+    rotate_cause, rotate_hint, _ = _unresolved_diagnosis(
         "WARNING: Problem converting rotate(a=[90, 0, 0, 0]) parameter in file q.scad, line 1"
     )
-    convert_cause, convert_hint = _unresolved_diagnosis(
+    convert_cause, convert_hint, _ = _unresolved_diagnosis(
         "WARNING: Unable to convert cube(size=[undef, 30, 6], ...) parameter to a"
         " number or a vec3 of numbers in file q.scad, line 2"
     )
@@ -1182,7 +1182,7 @@ def test_an_over_long_rotate_vector_is_not_diagnosed_as_a_substitution():
 
     # Anchored, so a model cannot pick its own diagnosis by echoing the marker
     # back: OpenSCAD prints string literals into the warning verbatim.
-    literal, _ = _unresolved_diagnosis(
+    literal, _, _ = _unresolved_diagnosis(
         'WARNING: Problem converting rotate(a=["Unable to convert", 0, 0]) parameter'
         " in file q.scad, line 1"
     )
@@ -1987,3 +1987,60 @@ def test_the_three_verbs_give_one_diagnosis_for_one_engine_fact(tmp_path: Path):
             "a typo and a not-yet-generated file are indistinguishable here, "
             "so neither 'model' nor 'environment' may be claimed"
         )
+
+
+def test_the_consequence_is_hedged_exactly_where_the_evidence_is_weaker():
+    """#375. Three callers asserted flatly that the artifact is not the part.
+
+    Measured on both pinned engines, and the reason this is a defect rather than
+    a wording preference:
+
+        echo(nofunc(3)); cube([10,5,2]);    byte-identical to cube([10,5,2]);
+        rotate([90,0,0,0]) cube([10,5,2]);  byte-identical to rotate([90,0,0]) ...
+        o = undef; cube([o,5,2]);           DIFFERS -- the engine built its default
+
+    So only the substituted-value cause carries "is not". The refusal is unchanged
+    in every case; what changed is a claim the evidence does not support.
+    """
+    name = _unresolved_diagnosis("WARNING: Ignoring unknown function 'nofunc' in file b.scad")
+    rotate = _unresolved_diagnosis(
+        "WARNING: Problem converting rotate(a=[90, 0, 0, 0]) parameter in file o.scad, line 1"
+    )
+    substituted = _unresolved_diagnosis(
+        "WARNING: Unable to convert cube(size=[undef, 5, 2], ...) parameter to a number"
+    )
+
+    assert substituted[2] is True, "the engine built its own default; the artifact IS wrong"
+    assert name[2] is False, "the export is byte-identical to a correct source"
+    assert rotate[2] is False, "the export is byte-identical to a correct source"
+
+
+def test_every_caller_hedges_the_same_way_for_the_same_line():
+    """The three-different-accounts outcome this function exists to prevent (#308).
+
+    Hedging some callers and leaving others asserting would be worse than hedging
+    none, so the two pure refusal builders are driven directly across all three
+    causes. `check`'s two sentences take the same third element from the same call.
+
+    Deliberately behavioural rather than a grep for the phrase: `cli.py` also
+    builds a "would be measurements" sentence for the ABSENT BUILD INPUT refusal
+    (#355), where the strong claim is correct -- the mesh really is missing the
+    imported geometry. A source-text assertion cannot tell those apart.
+    """
+    from partspec.cli import _hollowed_measurements
+    from partspec.engines.openscad import _hollowed_views
+
+    lines = {
+        "name": "WARNING: Ignoring unknown function 'nofunc' in file b.scad",
+        "rotate": "WARNING: Problem converting rotate(a=[90, 0, 0, 0]) parameter in file o.scad",
+        "substituted": "WARNING: Unable to convert cube(size=[undef, 5, 2], ...) parameter",
+    }
+    for label, line in lines.items():
+        strong = _unresolved_diagnosis(line)[2]
+        for build, noun in ((_hollowed_measurements, "measurements"), (_hollowed_views, "views")):
+            message = build(line).message
+            expected = f"so these would be {noun}" if strong else f"so these may be {noun}"
+            assert expected in message, (
+                f"{build.__name__} on the {label} cause says {message!r}; "
+                f"it must agree with the diagnosis, which says strong={strong}"
+            )

@@ -277,20 +277,22 @@ def _evaluate(
             # (#237). The cause clause comes from the same classifier `check`
             # and `measure` use, so one engine line cannot be diagnosed two ways
             # depending on which path reached it (#308).
+            if artifact.unresolved:
+                empty_cause, _, artifact_is_wrong = _unresolved_diagnosis(artifact.unresolved[0])
+                existed = "never existed" if artifact_is_wrong else "may never have existed"
+                empty_detail = (
+                    f"the result is empty, but {empty_cause}, so the geometry "
+                    f"{existed} to be empty of: {artifact.unresolved[0]}"
+                )
+            else:
+                empty_detail = f"declared empty, but the part did not build: {artifact.message}"
             results.append(
                 CheckResult(
                     id=spec.id,
                     kind="empty",
                     phase=GEOMETRY,
                     status=Status.FAIL,
-                    detail=(
-                        f"the result is empty, but "
-                        f"{_unresolved_diagnosis(artifact.unresolved[0])[0]}, "
-                        f"so the geometry never existed to be empty of: "
-                        f"{artifact.unresolved[0]}"
-                        if artifact.unresolved
-                        else f"declared empty, but the part did not build: {artifact.message}"
-                    ),
+                    detail=empty_detail,
                 )
             )
         results.extend(
@@ -322,9 +324,10 @@ def _evaluate(
         # Diagnosed from the line that is QUOTED, so the sentence and the
         # evidence under it always name one cause even when both kinds are in
         # the list; the `(and N more)` suffix is what says the list is longer.
-        cause, report.hint = _unresolved_diagnosis(engine_unresolved[0])
+        cause, report.hint, artifact_is_wrong = _unresolved_diagnosis(engine_unresolved[0])
         report.error = (
-            f"{cause}, so the geometry measured is not the geometry this "
+            f"{cause}, so the geometry measured "
+            f"{'is not' if artifact_is_wrong else 'may not be'} the geometry this "
             f"source describes: {engine_unresolved[0]}"
         )
         if len(engine_unresolved) > 1:
@@ -1861,8 +1864,8 @@ _UNUSABLE_VALUE_HINT = (
 )
 
 
-def _unresolved_diagnosis(line: str) -> tuple[str, str]:
-    """The (cause, hint) pair for one success-path marker line.
+def _unresolved_diagnosis(line: str) -> tuple[str, str, bool]:
+    """The (cause, hint, artifact_is_wrong) triple for one success-path marker line.
 
     One function and one set of strings for four callers, because `check`,
     `measure` and `render` refusing the same engine line must not drift into
@@ -1883,14 +1886,32 @@ def _unresolved_diagnosis(line: str) -> tuple[str, str]:
     engine could not use the value AS WRITTEN, which is all that line supports.
     The substitution text is unchanged for the marker it was measured on, and
     the weaker text is what an unrecognised substitution marker falls to.
+
+    **The third element is the CONSEQUENCE's strength**, and it is here for the
+    reason the cause is: four callers append their own sentence, and three of
+    them asserted flatly that the artifact is not the part (#375). For two of the
+    three causes that is false, measured on both pinned engines:
+
+        echo(nofunc(3)); cube([10,5,2]);     byte-identical to cube([10,5,2]);
+        rotate([90,0,0,0]) cube([10,5,2]);   byte-identical to rotate([90,0,0]) ...
+        o = undef; cube([o,5,2]);            DIFFERS -- the engine built its default
+
+    So only the substituted-value cause supports "is not". The other two support
+    "may not be", which is what the refusal actually rests on: partspec cannot
+    tell, and a refusal it can defend is not improved by a claim it cannot. The
+    refusal itself is unchanged in every case (FAILURE-MODES 9a, 9b).
+
+    Selected here rather than at the call sites so the four sentences cannot
+    drift apart -- three hedging while the fourth asserts is the
+    three-different-accounts outcome this function exists to prevent.
     """
     from .engines.openscad import _message, is_substituted_value
 
     if is_substituted_value(line):
         if _message(line).startswith(_DEFAULTED_VALUE_MARKER):
-            return _SUBSTITUTED_VALUE_CAUSE, _SUBSTITUTED_VALUE_HINT
-        return _UNUSABLE_VALUE_CAUSE, _UNUSABLE_VALUE_HINT
-    return _UNRESOLVED_NAME_CAUSE, _UNRESOLVED_NAME_HINT
+            return _SUBSTITUTED_VALUE_CAUSE, _SUBSTITUTED_VALUE_HINT, True
+        return _UNUSABLE_VALUE_CAUSE, _UNUSABLE_VALUE_HINT, False
+    return _UNRESOLVED_NAME_CAUSE, _UNRESOLVED_NAME_HINT, False
 
 
 def _skipped(spec: CheckSpec, reason: str) -> CheckResult:

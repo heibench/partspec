@@ -155,9 +155,15 @@ Read the non-`pass` statuses in `checks[]`:
   If you did not change the contract, someone else's change is unreviewed — escalate.
   If you did: §4.
 - **`error` names a name the engine could not resolve** (`build_origin: null`) → the
-  build *succeeded* and the artifact is not the part: OpenSCAD renders an unresolved
-  call's children not at all, so a misspelt module or an include that did not open
-  removed geometry the contract is about (`FAILURE-MODES.md` §1). **Do not touch the
+  build *succeeded* and the artifact **may not be** the part: OpenSCAD renders an
+  unresolved call's children not at all, so a misspelt module or an include that did not
+  open removed geometry the contract is about (`FAILURE-MODES.md` §1). *May*, because the
+  marker does not separate the shapes: an unresolved **module** removes its children, and
+  an unresolved **function** in a position that reaches no geometry does not.
+  `echo(nofunc(3)); cube([10,5,2]);` exports byte-identical to the `cube` alone on both
+  pinned engines, and is refused anyway — partspec cannot tell which shape it has, and a
+  refusal it can defend is not improved by a claim it cannot (#375). The `error` field
+  hedges to match. **Do not touch the
   contract** — the fix is in the model source or on `OPENSCADPATH`. `error` quotes the
   engine's own line verbatim, and the two pinned engines word it differently. An
   unresolved module, function or variable names the file and the line number on both. An
@@ -184,9 +190,12 @@ Read the non-`pass` statuses in `checks[]`:
   **A second spelling, and it does not mean quite the same thing.** `rotate()` words its
   failure `Problem converting rotate(a=undef) parameter in file part.scad, line 2` — also
   identical on both engines — and it says the engine could not use the `rotate` parameters
-  *as written* (#333). `error` says so too, and says no more than that: **the engine could
-  not use a value as written**, never the substitution sentence above, because for one of
-  these shapes no default is taken (#360). Sometimes that is a default going in and the
+  *as written* (#333). `error` says so too, and adds only a hedged consequence — **the
+  engine could not use a value as written, so the geometry measured may not be the
+  geometry this source describes** — never the substitution sentence above, because for
+  one of these shapes no default is taken (#360). `rotate([90,0,0,0])` exports
+  byte-identical to `rotate([90,0,0])`, so *may* is the strongest claim the line carries
+  (#375). Sometimes that is a default going in and the
   rotation being lost:
   `rotate(undef)` and `rotate([undef,0,0])` leave the part at identity, nothing having
   changed size, standing in an orientation nobody wrote down. Sometimes it is not.

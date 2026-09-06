@@ -2414,7 +2414,7 @@ def test_the_render_refusal_names_the_same_cause_check_would(tmp_path: Path):
     result = openscad.render_views(OpenSCADSource(src), tmp_path / "out")
 
     assert isinstance(result, BuildError)
-    cause, hint = _unresolved_diagnosis(result.unresolved[0])
+    cause, hint, _ = _unresolved_diagnosis(result.unresolved[0])
     assert result.message.startswith(cause)
     assert result.hint == hint
 
