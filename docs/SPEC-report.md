@@ -1088,6 +1088,18 @@ reachable on the same tier from the rules just above.
   than the part's defect, and it MUST cost **that one name only**: the verb continues and
   emits every other quantity, since a quantity needing nothing the part lacks is answerable
   whatever defeated its neighbour (#365).
+- **`refused_by`** — name → `"part"` or `"tool"`, for every name in `refused`. Present
+  exactly when `refused` is and keyed identically, so a consumer never finds a name in
+  one and not the other. `"part"` means the part defeated this measurement, which is a
+  finding about the design; `"tool"` means partspec could not perform it, which is not a
+  statement about the design at all. Until #371 both landed in `refused` as prose and the
+  only way to tell them apart was to string-match English — in the block whose entries
+  otherwise mean "the part's defect", so a bug in this tool read as one in the part.
+  A consumer MUST branch on this key rather than on the reason text.
+  Additive under §7.1: `refused` keeps `dict[str, str]`, so a reader written before this
+  existed is unaffected. **A name whose `refused_by` is `"tool"` makes the run exit `4`**,
+  and the payload is still emitted in full — the exit code says partspec failed for that
+  name, and the other measurements stand.
 - **`unavailable`** — the names this **tier** cannot answer for any part, so the same list
   every time that backend measures anything. Listed in the fixed order the verb asks them
   in, which is not alphabetical. **Omitted entirely when the tier can answer everything
@@ -1101,7 +1113,8 @@ tier or not at all. Before D17 only the second kind existed and dropping the nam
 was honest; it is not honest now, since an open mesh drops `volume`, `genus` and
 `center_of_mass` and a reader would conclude the part has no volume to claim.
 
-Emission order, among those present, is `measurements`, `refused`, `unavailable`, after
+Emission order, among those present, is `measurements`, `refused`, `refused_by`,
+`unavailable`, after
 `geometry`; `artifact` follows them when `--out` was passed, in the two states Scope fixes. The name vocabulary
 is the backend capability set, deliberately **not** enumerated here — it is a superset of
 the check vocabulary (`SPEC-contract.md` §7: `is_valid` and `topology_counts` are worth

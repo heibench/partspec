@@ -229,6 +229,14 @@ Read the non-`pass` statuses in `checks[]`:
 `measure` and `render` reach no verdict, so they exit `0` or, on **any** build failure,
 `4` — model-origin included, which is the case the table has no row for.
 
+**`measure` has one further exit-`4` state, and it is the only one that emits a full
+payload.** If a backend *raises* while measuring a name, that name lands in `refused`
+with `refused_by: "tool"` and the run exits `4` **with every other measurement present**
+(#371). Read it as "partspec failed for that name", never as a finding about the part:
+the numbers on stdout are as good as they ever were, and the exit code is not about them.
+It is distinguishable at a glance — the failure shape below carries `error` and no
+`measurements`, this one carries `measurements` and no `error`.
+
 **The table routes you into it.** The exit-3 row says to run `measure`, and a contract
 that asserts nothing over a model that does not build is exactly the shape that produces
 exit 3: measured, a checkless contract over a `.scad` with a syntax error gives `check`
@@ -242,8 +250,10 @@ here.** On these two verbs, decide whose fault it is first:
   `"environment"`; branch on it exactly as §2.3 branches on `build_origin`. Measured, that
   same syntax-error `.scad` gives `origin: "model"`, and the same contract run under
   `PARTSPEC_OPENSCAD=/nope/openscad` gives `origin: "environment"`.
-- **`measure` has no such field, so there is nothing to branch on.** Measured, its
-  failure payload carries exactly `engine`, `error`, `geometry`, `hint`, `params`,
+- **`measure` has no such field for a build failure, so there is nothing to branch on
+  there.** (It does carry `refused_by` when a *measurement* was refused, which is a
+  different question — that block is about individual names on a part that built.)
+  Measured, its failure payload carries exactly `engine`, `error`, `geometry`, `hint`, `params`,
   `part`, `payload`, `schema_version`, `tool` — in *both* failure modes, and
   `tests/test_cli.py::test_the_measure_failure_payload_carries_exactly_these_keys`
   fails when that stops being true. `origin` is **absent**, not
@@ -255,7 +265,8 @@ here.** On these two verbs, decide whose fault it is first:
 **States fall outside both branches, and none of them is about the part.** If the exit is
 `4` and **stdout is empty** — no payload at all, not a payload without `origin` — then
 either the contract raised **or partspec itself failed**, before the verb had anything to
-describe. **stderr says which**, in one line, and the two are distinct:
+describe. (Empty is the discriminator, and it is why the `refused_by: "tool"` state above
+is not one of these: partspec failed for *one name* there and still described the part.) **stderr says which**, in one line, and the two are distinct:
 
 - *"the contract is wrong, not the part"* → the contract raised. That is §2.3's last
   bullet and it applies here in full; §2.4 narrows the table's *rows*, not §2.3's

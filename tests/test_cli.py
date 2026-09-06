@@ -274,8 +274,19 @@ def test_a_backend_that_raises_costs_one_name_and_not_the_run(tmp_path: Path, ca
         raise ContractError("measurement value is nan, which is not a number")
 
     monkeypatch.setattr(MeshBackend, "area", explode)
-    doc = _measure(scad_target(tmp_path, source="block_with_hole.scad", claims=""), capsys)
+    code = main(["measure", scad_target(tmp_path, source="block_with_hole.scad", claims="")])
+    doc = json.loads(capsys.readouterr().out)
 
+    # Exit 4, not 0 (#371). This is not a statement about the part -- it says
+    # partspec failed to do its job for one name, and exit 0 asserted the run was
+    # fine while sitting in a block whose other entries mean "the part defeated
+    # this measurement". The payload is still complete, which is #369's gain and
+    # is a property of the OUTPUT, untouched by the exit code.
+    assert code == 4
+    assert doc["refused_by"]["area"] == "tool", (
+        "a machine-readable discriminator, so telling a partspec bug from a defect "
+        "in the part does not require string-matching English"
+    )
     assert "nan" in doc["refused"]["area"] and "mesh" in doc["refused"]["area"]
     assert "area" not in doc["measurements"]
     assert doc["measurements"]["volume"]["value"] == pytest.approx(30 * 20 * 10 - 6 * 6 * 10)
@@ -334,8 +345,12 @@ def test_a_tier_that_answers_everything_omits_both_optional_blocks(tmp_path: Pat
         "    return Compound(children=[Box(10, 10, 10), Location((50, 0, 0)) * Box(10, 10, 10)])\n"
     )
     two = _measure(py_target(tmp_path, model="two.py", part_id="two"), capsys)
-    assert list(two) == [*doc, "refused"], "a part that defeats a measurement extends it too"
+    assert list(two) == [*doc, "refused", "refused_by"], (
+        "a part that defeats a measurement extends it too, and `refused_by` rides with "
+        "`refused` so a consumer never finds a name in one and not the other (#371)"
+    )
     assert "genus" in two["refused"] and "genus" not in two["measurements"]
+    assert two["refused_by"]["genus"] == "part", "this is the part's doing, not the tool's"
 
 
 @needs_build123d
@@ -2715,3 +2730,66 @@ def test_check_render_is_unaffected_by_the_render_refusal(tmp_path: Path):
     assert report["build_origin"] is None
     assert "renders" not in report
     assert not out.joinpath("renders").exists()
+
+
+@needs_scad_tier
+def test_a_tool_fault_and_a_part_fault_are_told_apart_by_a_key(tmp_path: Path, capsys, monkeypatch):
+    """#371. `refused` conflates two things that mean opposite things.
+
+    "the part defeated this measurement" is a statement about the part; "partspec
+    could not perform it" is a statement about partspec. Both landed in one
+    `dict[str, str]` at exit 0, so an agent had to string-match English to tell a
+    defect in the design from a bug in the tool -- and exit 0 said the run was
+    fine either way, in the block whose other entries are about the part.
+    """
+    from partspec.backends.mesh import MeshBackend
+    from partspec.status import ContractError
+
+    target = scad_target(tmp_path, source="block_with_hole.scad", claims="")
+
+    # The part defeated nothing and the tool worked: no refusal at all.
+    assert main(["measure", target]) == 0
+    clean = json.loads(capsys.readouterr().out)
+    assert "refused" not in clean and "refused_by" not in clean, (
+        "both blocks are omitted together when there is nothing to report"
+    )
+
+    def explode(self, a):
+        raise ContractError("simulated backend fault")
+
+    monkeypatch.setattr(MeshBackend, "area", explode)
+    assert main(["measure", target]) == 4, "a fault in this tool must not exit 0"
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["refused_by"] == {"area": "tool"}
+    assert set(doc["refused"]) == set(doc["refused_by"]), (
+        "keyed identically, so a consumer never asks whether a name is in one and not the other"
+    )
+    assert doc["measurements"], "the other names still emit; that is #369 and it stands"
+
+
+@needs_scad_tier
+def test_a_part_that_defeats_a_measurement_still_exits_0(tmp_path: Path, capsys):
+    """The control. Without it, a tool that exited 4 for every refusal would pass.
+
+    A part with no volume has no centre of mass. That is an answer about the
+    part, `measure` decides nothing about parts, and the exit code must not
+    start claiming otherwise.
+    """
+    assert main(["measure", scad_target(tmp_path, source="zero_thickness.scad", claims="")]) == 0
+    doc = json.loads(capsys.readouterr().out)
+    assert doc["refused_by"]["center_of_mass"] == "part"
+    assert "tool" not in doc["refused_by"].values()
+
+
+@needs_scad_tier
+def test_the_discriminator_is_additive_and_rides_with_refused(tmp_path: Path, capsys):
+    """SPEC-report 7.1: adding a field is non-breaking; changing a value type is not.
+
+    `refused` keeps `dict[str, str]`, so a consumer written before #371 reads it
+    unchanged and simply does not see the new block.
+    """
+    doc = _measure(scad_target(tmp_path, source="zero_thickness.scad", claims=""), capsys)
+    assert all(isinstance(v, str) for v in doc["refused"].values()), (
+        "widening this to an object would have been a schema break"
+    )
+    assert set(doc["refused_by"].values()) <= {"part", "tool"}

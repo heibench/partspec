@@ -1586,6 +1586,14 @@ def _measure_resolved(
 
     measurements: dict[str, object] = {}
     refused: dict[str, str] = {}
+    # Which of the two things `refused` conflates happened, per name. The block
+    # carries both "the part defeated this measurement" and "partspec could not
+    # perform it", and until #371 the only discriminator was the English in the
+    # reason -- so an agent had to string-match to tell a defect in the part from
+    # a defect in this tool. A separate block rather than widening `refused`'s
+    # value: adding a field is non-breaking (SPEC-report 7.1), changing
+    # `dict[str, str]` to `dict[str, object]` is not.
+    refused_by: dict[str, str] = {}
     unavailable: list[str] = []
 
     # `is_valid` and `topology_counts` are here but are not check kinds — the
@@ -1630,9 +1638,11 @@ def _measure_resolved(
             # answers for other parts. What defeated it arrived with this
             # artifact, which is what `refused` is for.
             refused[name] = f"the {backend.kind} backend could not measure {name} here: {exc}"
+            refused_by[name] = "tool"
             continue
         if isinstance(result, Unsupported):
             refused[name] = result.reason
+            refused_by[name] = "part"
             continue
         entry: dict[str, object] = {
             "value": list(result.value) if result.is_vector else result.value,
@@ -1683,6 +1693,9 @@ def _measure_resolved(
     # teaching exactly the wrong lesson, in the verb that exists for adoption.
     if refused:
         measured["refused"] = refused
+        # Emitted with `refused` and keyed identically, so a consumer never has to
+        # ask whether a name is present in one and not the other.
+        measured["refused_by"] = refused_by
     if unavailable:
         measured["unavailable"] = unavailable
 
@@ -1733,6 +1746,29 @@ def _measure_resolved(
             f"this verb's whole product, and only the OpenSCAD tier also writes an artifact",
             file=sys.stderr,
         )
+    tool_faults = sorted(n for n, by in refused_by.items() if by == "tool")
+    if tool_faults:
+        # `measure` decides nothing about the part, and this does not decide
+        # anything about the part either -- it says partspec failed to do its job
+        # for these names. Exit 0 asserted the run was fine, in a block whose
+        # other entries mean "the part defeated this measurement", so a tool fault
+        # read as a statement about the part (#371). Exit 4 is the code this verb
+        # already returns when it could not measure what it was given.
+        #
+        # The payload is still printed, in full, above. #369's gain -- one raising
+        # backend costs one name and not the other thirteen -- is a property of
+        # the OUTPUT, and is untouched: the numbers are there, and the exit code
+        # says one of them is missing for partspec's own reason.
+        print(
+            f"partspec: this tool could not measure {', '.join(tool_faults)} "
+            f"and the failure is partspec's, not the part's",
+            file=sys.stderr,
+        )
+        print(
+            "  hint: read `refused_by` in the payload; the other measurements stand",
+            file=sys.stderr,
+        )
+        return exit_code(Verdict.ERROR)
     return 0
 
 
