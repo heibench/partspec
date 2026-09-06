@@ -1113,7 +1113,13 @@ def test_the_readme_console_block_is_what_the_console_prints():
         line.strip() for line in block.group(2).splitlines() if line.strip() and "/" not in line
     ]
     assert quoted, "nothing quoted to check"
-    missing = [line for line in quoted if line not in actual]
+    # Line membership, not substring containment (#380). `line not in actual` passes a
+    # STALE README whenever the message it quotes grew: #353 falsified a summary line by
+    # appending to it, so the old line is a prefix of the new one and a substring test
+    # finds it. That is the shape the drift actually took, and it is the hole #376 closed
+    # in the exemplar replay -- this is its sibling, closed the same way.
+    produced = {ln.strip() for ln in actual.splitlines()}
+    missing = [line for line in quoted if line not in produced]
     assert not missing, (
         "the README quotes console output the tool no longer prints:\n  "
         + "\n  ".join(missing)
@@ -1217,7 +1223,12 @@ def test_the_spacer_exemplars_diff_transcript_is_what_the_console_prints(tmp_pat
             # Per produced LINE, not a substring of the whole blob: #353
             # falsified this README by APPENDING to the summary line, and the
             # stale line is a substring of the line that replaced it.
-            produced = {ln.strip() for ln in printed.splitlines()}
+            #
+            # In ORDER and with the indent intact (#379). Set membership let the two
+            # quoted lines be swapped, or one of them claimed twice, and both sides
+            # were stripped -- so un-indenting the `covered:` continuation passed,
+            # though that indent is how the README shows it IS a continuation.
+            produced_lines = [ln.rstrip() for ln in printed.splitlines()]
             # A floor, because `quoted <= produced` is vacuous when `quoted` is
             # empty: without it the README's whole console contract for this
             # command can be DELETED and the gate stays green. A `--quiet` step
@@ -1232,10 +1243,20 @@ def test_the_spacer_exemplars_diff_transcript_is_what_the_console_prints(tmp_pat
                     f"the exemplar runs `{line}` and quotes nothing it printed; "
                     "a step with no expected output asserts nothing"
                 )
-            missing = [q for q in quoted if q.strip() not in produced]
-            assert not missing, (
-                f"the exemplar quotes console output `{line}` no longer prints:\n  "
-                + "\n  ".join(missing)
+            # An ordered subsequence: each quoted line consumes one produced line, so
+            # reordering fails and a line claimed twice needs it printed twice. Elisions
+            # in the transcript are still allowed -- the gaps between matches are free.
+            cursor, unmatched = 0, []
+            for q in quoted:
+                want = q.rstrip()
+                try:
+                    cursor = produced_lines.index(want, cursor) + 1
+                except ValueError:
+                    unmatched.append(q)
+            assert not unmatched, (
+                f"the exemplar quotes console output `{line}` no longer prints "
+                f"(or prints out of order, or at a different indent):\n  "
+                + "\n  ".join(repr(u) for u in unmatched)
                 + f"\n--- actual ---\n{printed}"
             )
         elif argv[0] == "cp":
@@ -1280,16 +1301,36 @@ def test_the_spec_samples_show_the_version_the_tool_actually_emits():
     the alternative is a normative document quietly describing a version its
     reader cannot get.
     """
+    import tomllib
+
     from partspec.report import tool_version
 
     installed = tool_version()
+    declared = tomllib.loads((ROOT / "pyproject.toml").read_text())["project"]["version"]
+
+    # `tool_version()` reads the INSTALLED distribution's metadata, which is the right
+    # subject -- a sample is what a consumer sees from their install. In a checkout it
+    # can lag `pyproject.toml`, and then this test goes red for a reason that has
+    # nothing to do with the change under test. A false red, never a false green, but it
+    # has cost two people time because the message did not say which case it was (#374).
+    stale_install = installed != declared
+    hint = (
+        f"\n\nNOTE: the installed partspec reports {installed} but pyproject.toml "
+        f"declares {declared}. You are in a checkout whose editable install predates a "
+        f"version bump, so this failure is probably about your environment rather than "
+        f"the docs. Reinstall (`just setup`, or `uv sync`) and re-run before believing "
+        f"it."
+        if stale_install
+        else ""
+    )
+
     for name in ("SPEC-report.md", "SPEC-diff.md"):
         text = (DOCS / name).read_text()
         shown = re.findall(r'"tool":\s*\{\s*"name":\s*"[\w-]+",\s*"version":\s*"([^"]+)"', text)
         assert shown, f"{name} no longer shows a tool block; this test has lost its subject"
         assert all(v == installed for v in shown), (
             f"{name} samples a tool version of {sorted(set(shown))} and the package is "
-            f"{installed}. A sample is what a consumer copies: update the literal."
+            f"{installed}. A sample is what a consumer copies: update the literal." + hint
         )
 
 

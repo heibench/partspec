@@ -2461,3 +2461,55 @@ def test_render_refuses_a_rotation_the_engine_dropped(tmp_path: Path):
     assert result.origin is None
     assert "rotate" in result.unresolved[0]
     assert not (out / "renders").exists()
+
+
+def test_a_listed_path_that_is_not_on_disk_does_not_resolve_a_reference():
+    """`.is_file()` is a gate, not a formality (#378).
+
+    A depfile names paths the engine *asked for* as well as ones it opened --
+    `RenderDeps.missing` documents that, measured for `import()` targets. Without
+    this filter such an entry can become the unique suffix hit: the reference is
+    marked resolved, the unreadable file contributes no variables, and
+    `build_origin` flips `environment` -> `model`. That is a verdict blaming a
+    correct contract.
+
+    The behaviour was already right; adversarial review of #373 mutation-tested it
+    and found that dropping `.is_file()` survived the whole suite on both engines.
+    Engine-free, so this runs everywhere.
+    """
+    from pathlib import Path
+
+    from partspec.engines.openscad import _from_engine_inputs
+
+    absent = Path("/nonexistent/libs/MCAD/units.scad")
+    assert not absent.exists(), "the fixture must genuinely not be on disk"
+    assert _from_engine_inputs("MCAD/units.scad", [absent]) is None, (
+        "a depfile entry that is not on disk must not resolve a reference"
+    )
+
+
+def test_a_listed_path_that_is_on_disk_still_resolves(tmp_path: Path):
+    """The control. Without it, a function that returned None always would pass above."""
+    from partspec.engines.openscad import _from_engine_inputs
+
+    real = tmp_path / "libs" / "MCAD" / "units.scad"
+    real.parent.mkdir(parents=True)
+    real.write_text("mm = 1;\n")
+    assert _from_engine_inputs("MCAD/units.scad", [real]) == real
+
+
+def test_an_absent_entry_does_not_mask_a_real_one(tmp_path: Path):
+    """The sharp case: both end with the token, only one exists.
+
+    Two hits would be an ambiguity and resolve to None, which is the honest
+    refusal. Filtering the absent one first leaves exactly one real file, so the
+    reference resolves to the file the engine actually opened.
+    """
+    from partspec.engines.openscad import _from_engine_inputs
+
+    real = tmp_path / "real" / "MCAD" / "units.scad"
+    real.parent.mkdir(parents=True)
+    real.write_text("mm = 1;\n")
+    absent = tmp_path / "ghost" / "MCAD" / "units.scad"
+
+    assert _from_engine_inputs("MCAD/units.scad", [absent, real]) == real
