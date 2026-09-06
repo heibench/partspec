@@ -18,7 +18,7 @@ dumps every quantity it can honestly produce, `render` writes the canonical view
 `lint` reads the source advisorily, exiting 0 whatever it finds because the findings are
 data about the source and not a verdict on the part.
 
-Status: pre-alpha; **v0.7.8 on PyPI** (2026-09-03, tag → trusted publishing via
+Status: pre-alpha; **v0.8.0 on PyPI** (2026-09-06, tag → trusted publishing via
 `release.yml`). What each release changed is in `CHANGELOG.md`; `docs/POST-V0.md` records
 what is still withheld and why. Keep this section an orientation — a test bounds it, since
 release narrative accreted here for six releases with nothing to evict it.

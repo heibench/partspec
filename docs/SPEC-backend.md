@@ -1,6 +1,6 @@
 # SPEC — the `partspec` geometry backend
 
-**Applies to:** v0.7.8 — the release this text describes. The `Status:` line records when
+**Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
 **Status:** draft 4 · 2026-08-09 · the protocol block gains the five primitives it was

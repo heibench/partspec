@@ -1,6 +1,6 @@
 # partspec lint — the rules
 
-**Applies to:** v0.7.8 — the release this text describes. The `Status:` line records when
+**Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
 **Status:** v2 · 2026-08-22 · closes #26 (tier 1) and #118 (tier 2) · `csg-two-part-intersection` added (#270); refusals reach the console (#288); `scad-untested-undef` added (#332, #338)

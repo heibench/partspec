@@ -1,6 +1,6 @@
 # SPEC — the `partspec` contract
 
-**Applies to:** v0.7.8 — the release this text describes. The `Status:` line records when
+**Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
 **Status:** draft 3 · 2026-08-09 · adds §4.8–4.11 (draft_angle, self_intersection_free,
