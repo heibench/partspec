@@ -23,7 +23,7 @@ dependencies = []
 # OpenSCAD parts. The `openscad` binary itself is a system dependency.
 mesh = ["trimesh>=5.0", "manifold3d>=3.5"]
 # build123d parts. Pins the OCP provider explicitly — see AGENTS.md.
-occt = ["build123d>=0.11,<0.12"]
+occt = ["build123d>=0.11,<0.13"]
 # CadQuery parts, adopted into the OCCT backend via `.wrapped`.
 #
 # Pulls build123d too: `backends/occt.py` measures through build123d's Shape
@@ -47,7 +47,7 @@ occt = ["build123d>=0.11,<0.12"]
 # failure was OCP 8 landing over a CadQuery built for 7.9, and no bound here
 # could have stopped it — the `--no-deps` re-assert that did it reads no
 # requirement in this file at all (fixed in #387, in the justfile).
-cadquery = ["cadquery>=2.8,<3", "build123d>=0.11,<0.12", "cadquery-ocp>=7.8"]
+cadquery = ["cadquery>=2.8,<3", "build123d>=0.11,<0.13", "cadquery-ocp>=7.8"]
 # The MCP adapter (D18): stateless tools over check/measure/render/vdiff, stdio transport.
 # Not an engine — pairs with whichever engine extras the parts need.
 mcp = ["mcp>=2,<3"]
