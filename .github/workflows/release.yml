@@ -67,7 +67,7 @@ jobs:
       # `test_every_action_in_the_release_workflow_is_pinned_to_an_exact_ref`
       # rather than asserted here. Bump the number; do not tidy it back to a
       # major.
-      - uses: astral-sh/setup-uv@v10.0.1
+      - uses: astral-sh/setup-uv@v10.1.0
 
       # The gate this workflow's whole safety argument rests on. Everything
       # below verifies the artifact; nothing verifies the code, because the
