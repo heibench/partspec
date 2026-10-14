@@ -67,7 +67,7 @@ jobs:
       # `test_every_action_in_the_release_workflow_is_pinned_to_an_exact_ref`
       # rather than asserted here. Bump the number; do not tidy it back to a
       # major.
-      - uses: astral-sh/setup-uv@v10.1.0
+      - uses: astral-sh/setup-uv@v10.3.0
 
       # The gate this workflow's whole safety argument rests on. Everything
       # below verifies the artifact; nothing verifies the code, because the
@@ -125,7 +125,7 @@ jobs:
           version=$(/tmp/smoke/bin/partspec --version)
           [ "$version" = "partspec ${GITHUB_REF_NAME#v}" ] || { echo "::error::--version says '$version'"; exit 1; }
 
-      - uses: actions/upload-artifact@v7.0.1
+      - uses: actions/upload-artifact@v7.0.2
         with:
           name: dist
           path: dist/
@@ -139,7 +139,7 @@ jobs:
     permissions:
       id-token: write
     steps:
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: dist
           path: dist/
