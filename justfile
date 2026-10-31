@@ -378,3 +378,7 @@ clean:
 # Run the agent-convergence evals (see evals/README.md). Costs real agent calls.
 eval *ARGS:
     uv run python evals/run.py {{ARGS}}
+
+# Audit every package pinned in uv.lock against OSV (uv's experimental `uv audit`).
+audit:
+    uv audit --frozen --preview-features audit-command
