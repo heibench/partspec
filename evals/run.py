@@ -322,6 +322,107 @@ def provenance(partspec: str) -> dict[str, str | None]:
     }
 
 
+def authoring_prompt(work: Path, cfg: dict, arm: str) -> str:
+    return AUTHORING_PROMPT.format(
+        tree=tree_of(work),
+        contract=cfg.get("frozen", ["spec.py"])[0],
+        model=cfg["model"],
+        guidance_note=GUIDANCE_NOTE if arm == "skills" else "",
+    )
+
+
+def repair_prompt(work: Path, cfg: dict, output: str, code: int, report_path: Path | None) -> str:
+    """The repair turn's prompt. `report_path` is offered only when it parsed."""
+    report_note = ""
+    if report_path is not None:
+        report_note = REPORT_NOTE.format(path=relative_to_work(report_path, work))
+    return PROMPT.format(
+        tree=tree_of(work),
+        contract=cfg.get("frozen", ["spec.py"])[0],
+        target=cfg["target"],
+        output=output,
+        code=code,
+        report_note=report_note,
+    )
+
+
+# Every key `run_trial` reads, plus the two recorded for analysis only. A key
+# outside this set is refused rather than ignored: a misspelt `frozen` would
+# otherwise fall back to `["spec.py"]` and hash-check less than the case meant.
+CASE_KEYS = {"id", "target", "frozen", "editable", "max_turns", "mode", "model", "defect"}
+
+
+def validate_case(case_dir: Path, cfg: dict) -> list[str]:
+    """Why this case cannot run, or `[]` — checked before any agent is paid.
+
+    A broken case used to surface as an `error` trial partway through a paid
+    run, or not at all: a frozen file named but absent hashes as `MISSING` on
+    both sides of the freeze check, which then guards nothing (#414).
+    """
+    problems = [f"unknown key {k!r}" for k in sorted(set(cfg) - CASE_KEYS)]
+    if not isinstance(cfg.get("id"), str) or not cfg["id"]:
+        problems.append("`id` must be a non-empty string")
+    target = cfg.get("target")
+    if not isinstance(target, str) or target.count(":") != 1:
+        problems.append("`target` must be `<file>.py:<factory>`")
+    elif not (case_dir / target.split(":")[0]).is_file():
+        problems.append(f"`target` names {target.split(':')[0]!r}, which is not in the case")
+    frozen = cfg.get("frozen", ["spec.py"])
+    if not isinstance(frozen, list) or not frozen or not all(isinstance(f, str) for f in frozen):
+        problems.append("`frozen` must be a non-empty list of file names")
+    else:
+        problems += [
+            f"frozen file {f!r} is not in the case" for f in frozen if not (case_dir / f).is_file()
+        ]
+    max_turns = cfg.get("max_turns", 6)
+    if not isinstance(max_turns, int) or isinstance(max_turns, bool) or max_turns < 1:
+        problems.append("`max_turns` must be a positive integer")
+    mode = cfg.get("mode")
+    if mode not in (None, "authoring"):
+        problems.append(f"`mode` must be absent or 'authoring', not {mode!r}")
+    elif mode == "authoring":
+        if not isinstance(cfg.get("model"), str):
+            problems.append("an authoring case must name its `model`")
+        if not (case_dir / "TASK.md").is_file():
+            problems.append("an authoring case must carry TASK.md")
+    elif not (case_dir / cfg.get("model", "model.scad")).is_file():
+        problems.append(f"repair case has no model {cfg.get('model', 'model.scad')!r} to repair")
+    return problems
+
+
+def load_cases() -> list[tuple[Path, dict]]:
+    cases = []
+    for parent in (CASES, AUTHORING_CASES):
+        if not parent.is_dir():
+            continue
+        for d in sorted(parent.iterdir()):
+            if (d / "case.toml").exists():
+                cases.append((d, tomllib.loads((d / "case.toml").read_text())))
+    return cases
+
+
+def case_problems(cases: list[tuple[Path, dict]]) -> list[str]:
+    """Every case's problems, plus ids that collide (they share output names)."""
+    problems = [f"{d.name}: {p}" for d, cfg in cases for p in validate_case(d, cfg)]
+    ids = [str(cfg.get("id")) for _d, cfg in cases]
+    problems += [f"duplicate case id {i!r}" for i in sorted({i for i in ids if ids.count(i) > 1})]
+    return problems
+
+
+def render_all(cases: list[tuple[Path, dict]]) -> int:
+    """Render every prompt each case can receive, without an agent. Count them."""
+    rendered = 0
+    for d, cfg in cases:
+        if cfg.get("mode") == "authoring":
+            for arm in ("control", "skills"):
+                authoring_prompt(d, cfg, arm)
+                rendered += 1
+        report = d / "outputs" / "report.json"
+        repair_prompt(d, cfg, f"{report}\nverdict: fail", 1, report)
+        rendered += 1
+    return rendered
+
+
 def run_trial(
     case_dir: Path, cfg: dict, trial_n: int, agent: str, partspec: str, out_dir: Path, arm: str
 ) -> Trial:
@@ -344,12 +445,7 @@ def run_trial(
         prev_sev = len(SEVERITY)
 
         if authoring:
-            prompt = AUTHORING_PROMPT.format(
-                tree=tree_of(work),
-                contract=frozen[0],
-                model=cfg["model"],
-                guidance_note=GUIDANCE_NOTE if arm == "skills" else "",
-            )
+            prompt = authoring_prompt(work, cfg, arm)
             ok, note = call_agent(agent, work, prompt)
             (out_dir / f"{cfg['id']}-{arm}-t{trial_n}-author.prompt.md").write_text(prompt)
             (out_dir / f"{cfg['id']}-{arm}-t{trial_n}-author.agent.md").write_text(note)
@@ -386,17 +482,8 @@ def run_trial(
                 t.note = t.note or f"budget of {max_turns} turns exhausted"
                 break
 
-            report_note = ""
-            if report is not None and report_path is not None:
-                report_note = REPORT_NOTE.format(path=relative_to_work(report_path, work))
-
-            prompt = PROMPT.format(
-                tree=tree_of(work),
-                contract=frozen[0],
-                target=target,
-                output=output,
-                code=code,
-                report_note=report_note,
+            prompt = repair_prompt(
+                work, cfg, output, code, report_path if report is not None else None
             )
             ok, note = call_agent(agent, work, prompt)
             (out_dir / f"{cfg['id']}-{arm}-t{trial_n}-turn{turn}.prompt.md").write_text(prompt)
@@ -424,7 +511,7 @@ def run_trial(
     return t
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
         description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter
     )
@@ -434,20 +521,27 @@ def main() -> int:
     ap.add_argument("--partspec", default=os.environ.get("PARTSPEC_BIN", "partspec"))
     ap.add_argument("--list", action="store_true")
     ap.add_argument(
+        "--validate",
+        action="store_true",
+        help="check every case and render every prompt, calling no agent; exit 1 on a problem",
+    )
+    ap.add_argument(
         "--arm",
         choices=["control", "skills"],
         default="control",
         help="authoring guidance absent (control) or present (skills) — #53",
     )
-    args = ap.parse_args()
+    args = ap.parse_args(argv)
 
-    cases = []
-    for parent in (CASES, AUTHORING_CASES):
-        if not parent.is_dir():
-            continue
-        for d in sorted(parent.iterdir()):
-            if (d / "case.toml").exists():
-                cases.append((d, tomllib.loads((d / "case.toml").read_text())))
+    cases = load_cases()
+    if args.validate:
+        problems = case_problems(cases)
+        for p in problems:
+            print(p, file=sys.stderr)
+        if problems:
+            return 1
+        print(f"{len(cases)} case(s) valid; {render_all(cases)} prompt(s) rendered")
+        return 0
 
     if args.list:
         for _d, cfg in cases:
@@ -471,6 +565,13 @@ def main() -> int:
         if not cases:
             print("no authoring cases to run under --arm skills", file=sys.stderr)
             return 64
+
+    # Only the cases this run will pay for: a broken case elsewhere in the
+    # tree is `--validate`'s to report, not a reason to refuse this one.
+    problems = case_problems(cases)
+    if problems:
+        print("refusing to run; invalid case(s):\n  " + "\n  ".join(problems), file=sys.stderr)
+        return 1
 
     # ONE executable, resolved here and passed down resolved and ABSOLUTE.
     # `run_check` uses this whole string as argv[0], so the earlier
