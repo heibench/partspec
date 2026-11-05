@@ -32,7 +32,7 @@ ROOT = Path(__file__).resolve().parent
 CASES = ROOT / "cases"
 AUTHORING_CASES = ROOT / "cases-authoring"
 RESULTS = ROOT / "results"
-SKILLS = ROOT.parent / "skills"
+REPO = ROOT.parent
 
 # Tools are restricted to file access on purpose: withholding Bash is what makes
 # "the agent does not run partspec itself" a property of the harness rather than
@@ -100,6 +100,84 @@ The directory `skills/` contains this project's authoring guidance
 (`openscad-authoring/SKILL.md`, `contract-authoring/SKILL.md`). Read it and
 follow it.
 """
+
+
+REPAIR, AUTHORING = "repair", "authoring"
+MODES = (REPAIR, AUTHORING)
+
+
+def case_mode(cfg: dict) -> str:
+    return AUTHORING if cfg.get("mode") == "authoring" else REPAIR
+
+
+@dataclass(frozen=True)
+class Arm:
+    """One arm of the experiment, as data. Every arm-dependent behaviour reads its row.
+
+    The arm was four comparisons against the literal `"skills"`, so a third
+    name added to `--arm`'s choices matched none of them: it ran across every
+    case, received no treatment, and wrote a `results.json` indistinguishable
+    from a real arm's (#410). Here eligibility is stated per row rather than
+    inherited, and a row that is neither the baseline nor treated is refused
+    when it is selected.
+    """
+
+    help: str
+    # Which cases the arm applies to. Never defaulted: an arm that applies
+    # everywhere says so.
+    modes: frozenset[str]
+    # The treatment. Repo-relative directories copied into the work tree under
+    # the same name, and text appended to the authoring prompt.
+    copies: tuple[str, ...] = ()
+    guidance_note: str = ""
+    # Receives nothing, on purpose. The only way an untreated arm may run.
+    baseline: bool = False
+
+    @property
+    def treated(self) -> bool:
+        return bool(self.copies or self.guidance_note)
+
+
+ARMS: dict[str, Arm] = {
+    "control": Arm(
+        help="authoring guidance absent; the baseline, on every case",
+        modes=frozenset(MODES),
+        baseline=True,
+    ),
+    "skills": Arm(
+        help="authoring guidance present (#53); authoring cases only",
+        # Authoring only: a skills copy the repair prompt never mentions
+        # would be an arm label describing no treatment.
+        modes=frozenset({AUTHORING}),
+        copies=("skills",),
+        guidance_note=GUIDANCE_NOTE,
+    ),
+}
+
+
+def arm_problems(name: str, arm: Arm) -> list[str]:
+    problems = []
+    if not arm.modes or not arm.modes <= set(MODES):
+        problems.append(f"arm {name!r} must apply to some of {MODES}, not {sorted(arm.modes)}")
+    if arm.guidance_note and AUTHORING not in arm.modes:
+        problems.append(f"arm {name!r} adds prompt guidance but no authoring case can receive it")
+    if arm.baseline == arm.treated:
+        problems.append(
+            f"arm {name!r} defines no treatment and is not the baseline"
+            if not arm.treated
+            else f"arm {name!r} is the baseline and must receive nothing"
+        )
+    return problems
+
+
+def arm_named(name: str) -> str:
+    """`--arm`'s parser: an unknown or treatment-less arm never reaches a trial."""
+    if name not in ARMS:
+        raise argparse.ArgumentTypeError(f"unknown arm {name!r}; defined: {', '.join(ARMS)}")
+    problems = arm_problems(name, ARMS[name])
+    if problems:
+        raise argparse.ArgumentTypeError("; ".join(problems))
+    return name
 
 
 @dataclass
@@ -327,7 +405,7 @@ def authoring_prompt(work: Path, cfg: dict, arm: str) -> str:
         tree=tree_of(work),
         contract=cfg.get("frozen", ["spec.py"])[0],
         model=cfg["model"],
-        guidance_note=GUIDANCE_NOTE if arm == "skills" else "",
+        guidance_note=ARMS[arm].guidance_note,
     )
 
 
@@ -413,9 +491,9 @@ def render_all(cases: list[tuple[Path, dict]]) -> int:
     """Render every prompt each case can receive, without an agent. Count them."""
     rendered = 0
     for d, cfg in cases:
-        if cfg.get("mode") == "authoring":
-            for arm in ("control", "skills"):
-                authoring_prompt(d, cfg, arm)
+        for name, arm in ARMS.items():
+            if case_mode(cfg) == AUTHORING and AUTHORING in arm.modes:
+                authoring_prompt(d, cfg, name)
                 rendered += 1
         report = d / "outputs" / "report.json"
         repair_prompt(d, cfg, f"{report}\nverdict: fail", 1, report)
@@ -430,17 +508,17 @@ def run_trial(
     target = cfg["target"]
     frozen = cfg.get("frozen", ["spec.py"])
     max_turns = cfg.get("max_turns", 6)
-    authoring = cfg.get("mode") == "authoring"
+    authoring = case_mode(cfg) == AUTHORING
+    treatment = ARMS[arm]
 
     with tempfile.TemporaryDirectory(prefix=f"partspec-eval-{cfg['id']}-") as tmp:
         work = Path(tmp) / cfg["id"]
         shutil.copytree(
             case_dir, work, ignore=shutil.ignore_patterns("outputs", "__pycache__", "case.toml")
         )
-        if arm == "skills" and authoring:
-            # Gated on authoring: a skills copy the repair prompt never
-            # mentions would be an arm label describing no treatment.
-            shutil.copytree(SKILLS, work / "skills")
+        if case_mode(cfg) in treatment.modes:
+            for name in treatment.copies:
+                shutil.copytree(REPO / name, work / name)
         baseline = digests(work, frozen)
         prev_sev = len(SEVERITY)
 
@@ -505,7 +583,7 @@ def run_trial(
         # Preserve whatever the agent left behind, for post-hoc reading.
         keep = out_dir / f"{cfg['id']}-{arm}-t{trial_n}-final"
         shutil.copytree(
-            work, keep, ignore=shutil.ignore_patterns("outputs", "__pycache__", "skills")
+            work, keep, ignore=shutil.ignore_patterns("outputs", "__pycache__", *treatment.copies)
         )
 
     return t
@@ -527,9 +605,10 @@ def main(argv: list[str] | None = None) -> int:
     )
     ap.add_argument(
         "--arm",
-        choices=["control", "skills"],
+        type=arm_named,
+        choices=list(ARMS),
         default="control",
-        help="authoring guidance absent (control) or present (skills) — #53",
+        help="; ".join(f"{name}: {arm.help}" for name, arm in ARMS.items()),
     )
     args = ap.parse_args(argv)
 
@@ -557,14 +636,15 @@ def main(argv: list[str] | None = None) -> int:
             print(f"no case matched {args.case}", file=sys.stderr)
             return 64
 
-    if args.arm == "skills":
-        skipped = [c["id"] for _d, c in cases if c.get("mode") != "authoring"]
-        cases = [(d, c) for d, c in cases if c.get("mode") == "authoring"]
-        if skipped:
-            print(f"--arm skills applies to authoring cases only; skipping: {', '.join(skipped)}")
-        if not cases:
-            print("no authoring cases to run under --arm skills", file=sys.stderr)
-            return 64
+    arm = ARMS[args.arm]
+    applies = " or ".join(m for m in MODES if m in arm.modes)
+    skipped = [c["id"] for _d, c in cases if case_mode(c) not in arm.modes]
+    cases = [(d, c) for d, c in cases if case_mode(c) in arm.modes]
+    if skipped:
+        print(f"--arm {args.arm} applies to {applies} cases only; skipping: {', '.join(skipped)}")
+    if not cases:
+        print(f"no {applies} cases to run under --arm {args.arm}", file=sys.stderr)
+        return 64
 
     # Only the cases this run will pay for: a broken case elsewhere in the
     # tree is `--validate`'s to report, not a reason to refuse this one.

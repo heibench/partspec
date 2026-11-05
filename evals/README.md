@@ -59,6 +59,11 @@ The harness itself is tested without an agent: `tests/test_evals_harness.py` dri
 assignment, the freeze check, `gamed` detection and the `results.json` schema. A change
 to `run.py` should land with a test there, not with a paid run as its only evidence.
 
+An arm (`--arm`) is one row of `ARMS` in `run.py`: the cases it applies to, what it copies
+into the work tree, and what it adds to the authoring prompt. A row that is neither the
+baseline nor treated is refused when selected, rather than running everywhere with nothing
+applied (#410).
+
 The agent under test is a pluggable command, so this harness is not tied to one model
 or one vendor:
 
