@@ -344,10 +344,29 @@ jobs:
       - name: Test
         run: just test-no-extras
 
+  # The eval harness spends real agent calls, so nothing here runs it — but
+  # its cases and prompt templates are free to check, and a broken one used to
+  # surface only partway through a paid run (#414). The harness's decision
+  # logic is unit-tested with a stubbed agent in `tests/test_evals_harness.py`,
+  # which the `test` job runs. Ungated: it takes seconds, so a path filter
+  # would save nothing and add one more list to keep in step.
+  evals:
+    name: Eval cases and prompts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: extractions/setup-just@v4
+      - uses: astral-sh/setup-uv@v10.3.0
+        with:
+          enable-cache: true
+      - name: Validate cases and render prompts (no agent call)
+        run: just eval-validate
+
   ok:
     name: ok
     if: always()
-    needs: [changes, check, test, mesh-only, mcp-only, no-extras, occt-only, cadquery-only]
+    needs: [changes, check, test, mesh-only, mcp-only, no-extras, occt-only, cadquery-only, evals]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:

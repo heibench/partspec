@@ -379,6 +379,12 @@ clean:
 eval *ARGS:
     uv run python evals/run.py {{ARGS}}
 
+# Free: no agent is called. `tests/test_evals_harness.py` covers the decision
+# logic with stubs; this is the smoke run CI gives every PR (#414).
+[doc("Validate every eval case and render every prompt, calling no agent")]
+eval-validate:
+    uv run python evals/run.py --validate
+
 # Audit every package pinned in uv.lock against OSV (uv's experimental `uv audit`).
 audit:
     uv audit --frozen --preview-features audit-command

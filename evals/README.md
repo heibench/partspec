@@ -51,7 +51,13 @@ does an agent converge to a passing part within a bounded number of turns?
 just eval                      # every case, default agent
 uv run python evals/run.py --case bore-breach --trials 3
 uv run python evals/run.py --list
+just eval-validate             # free: check every case, render every prompt, no agent
 ```
+
+The harness itself is tested without an agent: `tests/test_evals_harness.py` drives
+`run.py` with a stubbed agent command and a stubbed `partspec`, covering outcome
+assignment, the freeze check, `gamed` detection and the `results.json` schema. A change
+to `run.py` should land with a test there, not with a paid run as its only evidence.
 
 The agent under test is a pluggable command, so this harness is not tied to one model
 or one vendor:
