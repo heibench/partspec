@@ -705,7 +705,11 @@ def main(argv: list[str] | None = None) -> int:
                 t = run_trial(d, cfg, n, args.agent, partspec, out_dir, args.arm)
             except Exception as exc:  # noqa: BLE001 - a harness fault is data, not a crash
                 t = Trial(
-                    case=cfg["id"], trial=n, outcome="error", note=f"{type(exc).__name__}: {exc}"
+                    case=cfg["id"],
+                    trial=n,
+                    arm=args.arm,
+                    outcome="error",
+                    note=f"{type(exc).__name__}: {exc}",
                 )
             trials.append(t)
             turns = f"{len(t.turns)} turn(s)"

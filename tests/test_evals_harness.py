@@ -466,6 +466,20 @@ def test_a_harness_exception_is_recorded_as_an_error_trial_not_a_crash(
     assert (t["outcome"], t["note"]) == ("error", "RuntimeError: harness fault")
 
 
+def test_a_harness_exception_keeps_the_arm_it_ran_under(
+    run, tmp_path, agent, partspec, monkeypatch
+):
+    make_case(tmp_path / "cases-authoring", "a", authoring=True)
+
+    def boom(*_a, **_k):
+        raise RuntimeError("harness fault")
+
+    monkeypatch.setattr(run, "run_trial", boom)
+    assert run.main(["--agent", agent("fix"), "--partspec", partspec, "--arm", "skills"]) == 0
+    (t,) = results(tmp_path)["trials"]
+    assert (t["outcome"], t["arm"]) == ("error", "skills")
+
+
 def test_the_skills_arm_runs_authoring_cases_only(run, tmp_path, agent, partspec, capsys):
     make_case(tmp_path / "cases", "repair")
     make_case(tmp_path / "cases-authoring", "author", authoring=True)
