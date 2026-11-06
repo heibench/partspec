@@ -48,7 +48,7 @@ def run(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> types.ModuleType:
     skills = tmp_path / "skills"
     (skills / "openscad-authoring").mkdir(parents=True)
     (skills / "openscad-authoring" / "SKILL.md").write_text("# guidance\n")
-    monkeypatch.setattr(module, "SKILLS", skills)
+    monkeypatch.setattr(module, "REPO", tmp_path)
     return module
 
 
@@ -95,6 +95,9 @@ actions = sys.argv[1].split(",")
 action = actions[min(calls, len(actions) - 1)]
 if action == "fix":
     Path("model.scad").write_text("FIXED\\n")
+elif action == "fix-and-list":
+    names = sorted(p.name for p in Path().iterdir() if p.is_dir())
+    Path("model.scad").write_text("FIXED\\n// dirs: " + " ".join(names) + "\\n")
 elif action == "worsen":
     Path("model.scad").write_text("WORSE\\n")
 elif action == "game":
@@ -463,6 +466,20 @@ def test_a_harness_exception_is_recorded_as_an_error_trial_not_a_crash(
     assert (t["outcome"], t["note"]) == ("error", "RuntimeError: harness fault")
 
 
+def test_a_harness_exception_keeps_the_arm_it_ran_under(
+    run, tmp_path, agent, partspec, monkeypatch
+):
+    make_case(tmp_path / "cases-authoring", "a", authoring=True)
+
+    def boom(*_a, **_k):
+        raise RuntimeError("harness fault")
+
+    monkeypatch.setattr(run, "run_trial", boom)
+    assert run.main(["--agent", agent("fix"), "--partspec", partspec, "--arm", "skills"]) == 0
+    (t,) = results(tmp_path)["trials"]
+    assert (t["outcome"], t["arm"]) == ("error", "skills")
+
+
 def test_the_skills_arm_runs_authoring_cases_only(run, tmp_path, agent, partspec, capsys):
     make_case(tmp_path / "cases", "repair")
     make_case(tmp_path / "cases-authoring", "author", authoring=True)
@@ -493,6 +510,97 @@ def test_an_unknown_arm_is_refused_at_parse_time(run, tmp_path, agent, partspec)
         run.main(["--agent", agent("fix"), "--partspec", partspec, "--arm", "no-tool"])
     assert exc.value.code == 2
     assert agent.prompts() == []
+
+
+# --- the arm registry (#410) ---------------------------------------------
+
+
+def test_every_defined_arm_is_well_formed(run):
+    assert {name: run.arm_problems(name, arm) for name, arm in run.ARMS.items()} == {
+        name: [] for name in run.ARMS
+    }
+    assert [name for name, arm in run.ARMS.items() if arm.baseline] == ["control"]
+
+
+@pytest.mark.parametrize(
+    ("row", "problem"),
+    [
+        # The #410 failure mode: a name with a row and nothing in it.
+        ({"modes": frozenset({"repair"})}, "defines no treatment and is not the baseline"),
+        ({"modes": frozenset(), "copies": ("skills",)}, "must apply to some of"),
+        ({"modes": frozenset({"repiar"}), "copies": ("skills",)}, "must apply to some of"),
+        (
+            {"modes": frozenset({"repair"}), "guidance_note": "read it"},
+            "no authoring case can receive it",
+        ),
+        (
+            {"modes": frozenset({"repair"}), "copies": ("skills",), "baseline": True},
+            "is the baseline and must receive nothing",
+        ),
+    ],
+)
+def test_an_ill_formed_arm_is_refused_at_parse_time_before_any_trial(
+    run, tmp_path, agent, partspec, monkeypatch, capsys, row, problem
+):
+    make_case(tmp_path / "cases", "repair")
+    make_case(tmp_path / "cases-authoring", "author", authoring=True)
+    monkeypatch.setitem(run.ARMS, "no-tool", run.Arm(help="x", **row))
+    with pytest.raises(SystemExit) as exc:
+        run.main(["--agent", agent("fix"), "--partspec", partspec, "--arm", "no-tool"])
+    assert exc.value.code == 2
+    assert problem in capsys.readouterr().err
+    assert agent.prompts() == []
+    assert not (tmp_path / "results").exists()
+
+
+def test_a_new_arm_is_one_row_and_gets_exactly_its_row(
+    run, tmp_path, agent, partspec, monkeypatch, capsys
+):
+    make_case(tmp_path / "cases", "repair")
+    make_case(tmp_path / "cases-authoring", "author", authoring=True)
+    (tmp_path / "extra").mkdir()
+    (tmp_path / "extra" / "NOTE.md").write_text("extra\n")
+    monkeypatch.setitem(
+        run.ARMS,
+        "extra",
+        run.Arm(help="x", modes=frozenset({"repair"}), copies=("extra",)),
+    )
+    command = agent("fix-and-list")
+    assert run.main(["--agent", command, "--partspec", partspec, "--arm", "extra"]) == 0
+    assert "applies to repair cases only; skipping: author" in capsys.readouterr().out
+    payload = results(tmp_path)
+    assert [(t["case"], t["arm"]) for t in payload["trials"]] == [("repair", "extra")]
+    assert payload["arm"] == "extra"
+    # The treatment reached the work tree, and the prompt carried no guidance.
+    (prompt,) = agent.prompts()
+    assert run.GUIDANCE_NOTE not in prompt
+    (kept,) = (tmp_path / "results").glob("*/repair-extra-t1-final/model.scad")
+    assert "dirs: extra outputs" in kept.read_text()
+
+
+def test_the_treatment_is_not_kept_with_the_agents_work(run, tmp_path, agent, partspec):
+    case = make_case(tmp_path / "cases-authoring", "a", authoring=True)
+    out = tmp_path / "keep"
+    out.mkdir()
+    import tomllib
+
+    cfg = tomllib.loads((case / "case.toml").read_text())
+    run.run_trial(case, cfg, 1, agent("fix"), partspec, out, "skills")
+    kept = out / "a-skills-t1-final"
+    assert (kept / "model.scad").exists()
+    assert not (kept / "skills").exists()
+
+
+def test_an_arm_run_on_a_case_outside_its_modes_receives_no_copy(run, tmp_path, agent, partspec):
+    """`main` filters these out; `run_trial` must not rely on it."""
+    case = make_case(tmp_path / "cases", "r")
+    out = tmp_path / "keep"
+    out.mkdir()
+    import tomllib
+
+    cfg = tomllib.loads((case / "case.toml").read_text())
+    run.run_trial(case, cfg, 1, agent("fix-and-list"), partspec, out, "skills")
+    assert (out / "r-skills-t1-final" / "model.scad").read_text().endswith("dirs: outputs\n")
 
 
 def test_an_unmatched_case_is_refused(run, tmp_path, agent, partspec):
