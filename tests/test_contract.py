@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 from typing import Any
 
@@ -342,6 +343,36 @@ def test_target_slug_distinguishes_factories():
 def test_missing_contract_is_a_target_error():
     with pytest.raises(TargetError, match="not found"):
         resolve("does/not/exist.py")
+
+
+def test_naming_a_scad_model_prints_a_contract_that_resolves_to_it(tmp_path: Path):
+    """The refusal used to be `could not load contract: c.scad` and nothing
+    else (#439). What it prints now is run here, not read: saved beside the
+    model, the contract it offers resolves to a Part over that model."""
+    model = tmp_path / "c.scad"
+    model.write_text("cube(10);\n")
+
+    with pytest.raises(TargetError) as exc:
+        resolve(str(model))
+    message = str(exc.value)
+
+    offered = textwrap.dedent(message[message.index("\n\n") :]).strip() + "\n"
+    (tmp_path / "probe.py").write_text(offered)
+    part, _ = resolve(str(tmp_path / "probe.py"))
+    assert part.source.path.resolve() == model.resolve()
+
+
+def test_naming_any_other_file_says_what_a_target_is(tmp_path: Path):
+    """An agent refused on a `.scad` guessed a YAML contract next and met the
+    same bare message (#439). There is no model to wrap here, so no contract
+    is offered — only what a target is."""
+    other = tmp_path / "c.yaml"
+    other.write_text("part: c\n")
+
+    with pytest.raises(TargetError) as exc:
+        resolve(str(other))
+    assert "<file>.py[:<factory>]" in str(exc.value)
+    assert "def " not in str(exc.value)
 
 
 def test_ambiguity_lists_the_available_factories(tmp_path: Path):

@@ -1334,7 +1334,10 @@ def probe() -> Part:
     return Part("probe", openscad("../vendor/bracket.scad"))
 ```
 
-Naming the **model** instead exits `64`. That it gets as far as being called is worth
+Naming the **model** instead exits `64`. For a `.scad` the refusal prints the probe
+above with the path filled in, since that file cannot be loaded as Python at all and
+the three lines are the whole way forward (#439); any other non-Python file is told
+only what a target is. A Python model is a different arrival. That it gets as far as being called is worth
 stating, because it decides what the diagnostic can say: a build123d or CadQuery model
 annotated `-> Part` is annotated with *its* library's `Part`, and target resolution
 compares the annotation by name, so such a model is discovered as a factory like any
