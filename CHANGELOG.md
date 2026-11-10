@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`AGENT-CONTRACT.md` now opens with the exit map, inside what a truncating tool
+  shows** (#441). The file is over the inline output limit of the agent harness that
+  drives partspec most, so a `cat` of it returns a preview cut within 2000 characters
+  and a pointer to a saved copy; the exit table began at byte 5,672. Of 27 such reads
+  on one machine, 5 agents went on from the preview alone. The document now starts
+  with a first screen of 1,393 characters: the exit table, where the report is, the
+  two runs whose exit and report disagree, the two rules, and the section list. Two
+  tests hold it there, one on its length and one on its carrying every exit by itself.
+  The reference text below it is unchanged.
+
 - **Naming a model where a contract goes now says what a target is** (#439). The
   refusal was `could not load contract: <path>` at exit 64 and nothing else, and it
   was the commonest first-run error in the agent sessions reviewed: seven calls met

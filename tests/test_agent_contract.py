@@ -37,6 +37,47 @@ def test_the_exit_table_matches_the_status_module():
     assert rows.get("130") == "—", "the interrupt exit is part of the action map"
 
 
+FIRST_SCREEN_END = "<!-- END FIRST SCREEN -->"
+PREVIEW_CHARS = 2000
+"""What an agent harness shows of a tool output it judges too large.
+
+Measured on the harness that drives partspec most: a 31,921-byte `cat` of this
+file comes back as a preview cut at the last line break within 2000 characters
+and a pointer to a saved copy. Of 27 such reads on one machine, 5 agents went
+on from the preview alone, which ended 3,700 bytes before the exit table
+(#441).
+"""
+LONGEST_LINE = 100
+"""The cut falls on a line break, so it can land this far short of the limit."""
+
+
+def _first_screen() -> str:
+    return DOC[: DOC.index(FIRST_SCREEN_END)]
+
+
+def test_the_first_screen_survives_the_preview_cut():
+    """The bound is on the document's head, so that nothing can be prepended
+    to it or grown inside it without the last line leaving the preview."""
+    screen = _first_screen()
+    assert max(map(len, screen.splitlines())) <= LONGEST_LINE
+    assert len(screen) <= PREVIEW_CHARS - LONGEST_LINE
+
+
+def test_the_first_screen_maps_every_exit_by_itself():
+    """`test_the_exit_table_matches_the_status_module`, asked of the part an
+    agent is sure to have read. The whole-document test cannot stand in: it
+    reads every table in the file, so section 2's rows would answer for a
+    first screen that had lost its own."""
+    rows = {
+        code: word.strip().strip("`")
+        for code, word in re.findall(r"\| `(\d+)` \| ([^|]+) \|", _first_screen())
+    }
+    for verdict in Verdict:
+        assert rows.get(str(exit_code(verdict))) == str(verdict)
+    assert rows.get(str(EXIT_USAGE)) == "—"
+    assert rows.get("130") == "—"
+
+
 def test_quoted_tool_fragments_exist_in_the_code():
     """Every message fragment the doc teaches an agent to look for must be a
     string the tool actually emits."""
