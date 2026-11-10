@@ -90,6 +90,34 @@ locus (PR #340 review, F4).
 """
 
 
+def _not_a_contract(path: Path) -> str:
+    """The refusal for a file the import machinery will not load as Python.
+
+    It used to be `could not load contract: <path>`, which names no way
+    forward, and it was the commonest first-run error in the agent sessions
+    reviewed: seven calls met it, and one agent refused on a `.scad` tried a
+    YAML contract next and read the same sentence again (#439).
+
+    For a `.scad` the way forward is three lines, so they are printed with the
+    path filled in -- SPEC-contract 7's probe, which `measure` and `render`
+    accept as it stands. Any other suffix gets the form of a target and
+    nothing more: there is no saying which engine would read it.
+    """
+    what = (
+        f"{path} is not a contract: a target is a Python module that declares "
+        f"a part, <file>.py[:<factory>]"
+    )
+    if path.suffix.lower() != ".scad":
+        return f"{what} (SPEC-contract.md 2)"
+    return (
+        f"{what}. The smallest contract for this model, saved beside it "
+        f"(SPEC-contract.md 7):\n\n"
+        f"    from partspec import Part, openscad\n\n\n"
+        f"    def probe() -> Part:\n"
+        f'        return Part("probe", openscad({path.name!r}))'
+    )
+
+
 def _load(path: Path) -> ModuleType:
     if not path.is_file():
         raise TargetError(f"contract not found: {path}")
@@ -97,7 +125,7 @@ def _load(path: Path) -> ModuleType:
     module_name = f"{_CONTRACT_MODULE_PREFIX}{abs(hash(str(path.resolve())))}"
     spec = importlib.util.spec_from_file_location(module_name, path)
     if spec is None or spec.loader is None:
-        raise TargetError(f"could not load contract: {path}")
+        raise TargetError(_not_a_contract(path))
 
     module = importlib.util.module_from_spec(spec)
     # Registered before exec so that dataclasses and typing inside the contract

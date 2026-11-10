@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Naming a model where a contract goes now says what a target is** (#439). The
+  refusal was `could not load contract: <path>` at exit 64 and nothing else, and it
+  was the commonest first-run error in the agent sessions reviewed: seven calls met
+  it, and one agent refused on a `.scad` tried a YAML contract next and read the same
+  sentence. For a
+  `.scad` the message now prints the three-line probe from `SPEC-contract.md` §7 with
+  the path filled in, which `measure` and `render` accept as it stands. Any other
+  non-Python file gets the form `<file>.py[:<factory>]`. The exit code is unchanged.
+
 - **`render` no longer writes four pictures of an empty scene at exit 0** (#433).
   The OpenSCAD tier draws its views with the engine's preview, which abandons a CSG
   tree past 100000 normalized terms and draws nothing, while the export of the same
