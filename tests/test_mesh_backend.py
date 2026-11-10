@@ -366,6 +366,53 @@ def test_genus_is_refused_on_an_open_mesh(backend: MeshBackend, open_cube):
     assert "closed surface" in refused(backend.genus(open_cube)).reason
 
 
+def _sphere_pinched_at(*pairs: tuple[str, str]):
+    """An icosphere with each named pair of poles identified as one vertex.
+
+    Every edge keeps its two faces and the faces stay one component, so the
+    result is watertight and one solid — and at each identified vertex two
+    separate fans of faces meet, which no edge test can see.
+    """
+    sphere = trimesh.creation.icosphere(subdivisions=2)
+    v = sphere.vertices
+    pole = {
+        "north": int(v[:, 2].argmax()),
+        "south": int(v[:, 2].argmin()),
+        "east": int(v[:, 0].argmax()),
+        "west": int(v[:, 0].argmin()),
+    }
+    faces = sphere.faces.copy()
+    for keep, drop in pairs:
+        faces[faces == pole[drop]] = pole[keep]
+    return trimesh.Trimesh(vertices=v.copy(), faces=faces, process=False)
+
+
+@needs_mesh
+def test_genus_is_refused_where_the_surface_touches_itself_at_a_vertex(backend: MeshBackend):
+    """It previously reported genus 1, exact, on a pinched sphere (#437): X is
+    1 there, `S - X/2` is a half, and floor division made it a whole number."""
+    pinched = _sphere_pinched_at(("north", "south"))
+    assert pinched.is_watertight, "premise: no edge test sees the defect"
+    assert pinched.euler_number == 1, "premise: X is odd"
+    assert measured(backend.solid_count(pinched)).value == 1
+
+    assert "1 vertex" in refused(backend.genus(pinched)).reason
+
+
+@needs_mesh
+def test_genus_is_refused_at_two_pinches_though_the_characteristic_is_even(
+    backend: MeshBackend,
+):
+    """Why the precondition is on the vertices and not on the parity of X: two
+    pinches make X even again, and the formula then answers 1 without a
+    remainder to give it away."""
+    pinched = _sphere_pinched_at(("north", "south"), ("east", "west"))
+    assert pinched.is_watertight
+    assert pinched.euler_number == 0, "premise: X is even, so parity is silent"
+
+    assert "2 vertices" in refused(backend.genus(pinched)).reason
+
+
 @pytest.fixture
 def zero_thickness_sheet():
     """Closed, consistently wound, and enclosing nothing.

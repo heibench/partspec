@@ -9,6 +9,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`genus` no longer answers on a mesh that touches itself at a vertex** (#437).
+  Such a surface is watertight and one solid, because every edge still has its two
+  faces, and its Euler characteristic is one higher per touching vertex than either
+  surface the touch could be read as. `S - X // 2` floored the half: a loop of cubes
+  meeting at one corner reported `genus 1`, exact, under `PASS: 4 pass` at exit 0,
+  and now reports `unsupported` and `INCOMPLETE` at exit 2. The precondition is on
+  the vertices and not on the parity of X, since a sphere pinched at two vertices
+  has X = 0 and reported `genus 1` the same way. Mesh tier only; `volume`, `area`,
+  `solid_count` and `watertight` are unchanged on such a part.
+
 - **The consequence clause no longer asserts more than the evidence carries**
   (#375). Four callers appended their own sentence after the cause, and three
   said flatly that what was built is not the part. Measured on both pinned

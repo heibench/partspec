@@ -276,6 +276,18 @@ What is checked instead, stated where the measurement is taken:
   nothing beside the solid and every edge used exactly twice. Refused as *"the
   Euler-Poincare formula gives -1, which no closed body has"*.
 
+The mesh tier has a third precondition, and it is the one no edge test reaches:
+**one fan of faces at every vertex** (#437). Where a surface touches itself at a
+single vertex, every edge still has its two faces, so `watertight` is `true` and the
+part is one solid, while the vertex count is one short of either surface the touch
+could be read as. Measured, a loop of cubes whose two ends meet at one corner
+reported `genus 1`, exact, under `PASS: 4 pass` at exit 0, with a characteristic of
+1 — a half, floored. The parity of the characteristic is not the test: a sphere
+pinched at two vertices has a characteristic of 0 and reported `genus 1` with no
+remainder to give it away. The refusal counts the vertices: *"genus is defined for a
+surface with one fan of faces at every vertex; this mesh touches itself at 1 vertex,
+where joining the fans and parting them give different counts"*.
+
 Neither refuses more than the mathematics requires: a compound wrapping exactly one
 solid still measures, and so does a solid with a sealed void — two shells, both the
 solid's own, genus 0.

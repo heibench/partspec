@@ -473,7 +473,7 @@ bars.
 | `watertight` | none — it *is* the closedness test | always answered |
 | `volume` | closed, consistently wound **and outward-oriented**: the divergence theorem sums signed contributions, so a flipped triangle subtracts where it should add — and a uniformly inverted mesh is closed and consistent while every component encloses negative volume, which is refused too | `Unsupported` |
 | `center_of_mass` | `volume`'s precondition, **and a non-zero enclosed volume**: the centroid is that same integral divided by the volume, so a closed surface enclosing none has no centre of mass. trimesh divides in numpy and yields `nan`, which is not a measurement — the OCCT tier refuses the analogous shape (§4) | `Unsupported` |
-| `genus` | closed, and exactly one body | `Unsupported` |
+| `genus` | closed, exactly one body, and one fan of faces at every vertex — a surface touching itself at a vertex passes every edge test (#437) | `Unsupported` |
 | `solid_count` | no edge shared by more than two faces | `Unsupported` |
 
 `solid_count`'s precondition is narrower than the others *on purpose*. An **open** mesh still

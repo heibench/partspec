@@ -315,13 +315,19 @@ class MeshBackend:
         and the naive form is quietly wrong, on a triangle mesh every face is a
         disc and `V - E + F` is simply correct.
 
-        Two preconditions, both refused rather than assumed:
+        Three preconditions, each refused rather than assumed:
 
         * **Closed.** The Euler characteristic of an open surface does not give a
           genus. A cube missing one face reported genus 1 before this was
           checked — a through-hole that does not exist.
         * **One body.** Genus is defined per body; the characteristic of a
           complex is a different number. Two disjoint boxes give -1, not 0.
+        * **One fan of faces at every vertex.** Where the surface touches itself
+          at a single vertex every edge still has its two faces, so the first
+          test passes, and `V` is one short of either surface the touch could
+          be read as. A sphere pinched once has X = 1 and reported genus 1
+          before this was checked; pinched twice it has X = 0 and reported the
+          same, so the parity of X is not the test (#437).
 
         `V` counts *referenced* vertices only, so a stray unreferenced vertex
         cannot inflate it. Duplicate coincident vertices would break the count,
@@ -337,6 +343,14 @@ class MeshBackend:
             return Unsupported(
                 f"genus is defined per body; this part has {census.solids} solids "
                 f"(check solid_count first, or split the part)"
+            )
+        pinched = _pinched_vertices(a)
+        if pinched:
+            noun = "vertex" if pinched == 1 else "vertices"
+            return Unsupported(
+                f"genus is defined for a surface with one fan of faces at every vertex; "
+                f"this mesh touches itself at {pinched} {noun}, "
+                f"where joining the fans and parting them give different counts"
             )
         # G = S - X/2 over *all* shells, matching the OCCT tier. The naive
         # (2 - X)/2 assumes one shell and so is wrong by exactly the cavity
@@ -600,7 +614,13 @@ def _face_components(mesh: Any) -> Any:
     if len(adjacency) == 0:
         return labels
 
-    left, right = adjacency[:, 0], adjacency[:, 1]
+    return _hook(labels, adjacency[:, 0], adjacency[:, 1])
+
+
+def _hook(labels: Any, left: Any, right: Any) -> Any:
+    """Give joined items one label: `left[i]` and `right[i]` are joined."""
+    import numpy as np
+
     while True:
         nxt = labels.copy()
         np.minimum.at(nxt, left, labels[right])
@@ -613,6 +633,35 @@ def _face_components(mesh: Any) -> Any:
         if np.array_equal(nxt, labels):
             return labels
         labels = nxt
+
+
+def _pinched_vertices(mesh: Any) -> int:
+    """How many vertices carry more than one fan of faces.
+
+    A fan is the faces around a vertex joined through the edges that end at
+    it. Each face has three corners; two corners at the same vertex are joined
+    when their faces share an edge there, and a vertex whose corners fall into
+    more than one group is where the surface touches itself.
+
+    Only ever called on a closed mesh, where every edge has exactly two faces,
+    so `face_adjacency` omits nothing.
+    """
+    import numpy as np
+
+    faces = np.asarray(mesh.faces, dtype=np.int64)
+    pairs = np.asarray(mesh.face_adjacency, dtype=np.int64)
+    shared = np.asarray(mesh.face_adjacency_edges, dtype=np.int64)
+    if len(pairs) == 0:
+        return 0
+
+    def corners(side: int) -> Any:
+        """The corner of each pair's `side` face at each end of the shared edge."""
+        face = np.repeat(pairs[:, side], 2)
+        return 3 * face + (faces[face] == shared.reshape(-1, 1)).argmax(axis=1)
+
+    fans = _hook(np.arange(faces.size, dtype=np.int64), corners(0), corners(1))
+    per_vertex = np.unique(np.stack([faces.reshape(-1), fans], axis=1), axis=0)[:, 0]
+    return int((np.bincount(per_vertex) > 1).sum())
 
 
 def _no_cylindrical_face(what: str) -> Unsupported:
