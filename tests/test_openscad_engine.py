@@ -745,6 +745,39 @@ def test_a_consumed_part_refuses_to_render_views(tmp_path: Path):
     assert isinstance(result, BuildError)
 
 
+@needs_openscad
+def test_a_preview_the_engine_gave_up_on_refuses_to_render_views(tmp_path: Path):
+    """It previously wrote four identical frames of an empty scene at exit 0 (#433).
+
+    The views are drawn by the engine's preview, which normalizes the CSG tree
+    and abandons it past 100000 terms; the STL export has no such limit, so the
+    part builds and every guard on the export passes. Three unions of 48 slabs
+    intersected are 48^3 = 110592 terms from 144 cubes, and the result is a
+    plain 48 mm cube.
+    """
+    src = tmp_path / "cubed.scad"
+    src.write_text(
+        "n = 48;\n"
+        "intersection() {\n"
+        "  union() { for (i = [0:n-1]) translate([i, 0, 0]) cube([1, n, n]); }\n"
+        "  union() { for (i = [0:n-1]) translate([0, i, 0]) cube([n, 1, n]); }\n"
+        "  union() { for (i = [0:n-1]) translate([0, 0, i]) cube([n, n, 1]); }\n"
+        "}\n"
+    )
+    out = tmp_path / "out"
+
+    result = openscad.render_views(OpenSCADSource(src), out)
+
+    assert isinstance(result, BuildError)
+    if result.origin == "environment":
+        # No display on this runner: the engine never reached the preview.
+        assert "display" in result.message
+        return
+    assert "empty tree" in result.message
+    assert result.origin is None, "the part is sound; it is the picture that cannot be drawn"
+    assert not list((out / "renders").glob("*.png")), "no view may land"
+
+
 def _one_triangle_stl() -> bytes:
     """The smallest binary STL `_stl_bbox` can frame a camera from."""
     import struct

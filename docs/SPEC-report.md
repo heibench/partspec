@@ -510,6 +510,18 @@ reversed: a correct part reported as unmeasurable.
 field is `null` — a defaulted `"model"` would assert the very attribution the report
 declines to make.
 
+`render` has one refusal of its own, which no other verb can meet because it concerns
+the picture and not the part (#433). On the OpenSCAD tier the views are drawn by the
+engine's preview, which rewrites the CSG tree as a sum of products and abandons it
+past 100000 terms; the export does not, so the part builds and every guard asked of
+the STL passes. Measured, a difference of 400 bars by 400 slots wrote four
+byte-identical 4520-byte PNGs of an empty scene at exit `0`, with a `render_bbox` of
+799.5 x 40 x 5 beside them. The engine says so on stderr — *"CSG normalization
+resulted in an empty tree"* — and `render` now refuses on that line at exit `4`, with
+`origin: null` and the remedy in `hint`: wrapping the top level in `render()` makes
+the preview draw the evaluated geometry. No view lands, and a previous run's views are
+untouched.
+
 **What a refusing `render` leaves on disk**, stated positively because "nothing is
 written" is not true and a consumer would plan around it: no view is rendered, and the
 views a previous run left are byte-for-byte untouched. Two things do move, and both are

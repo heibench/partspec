@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`render` no longer writes four pictures of an empty scene at exit 0** (#433).
+  The OpenSCAD tier draws its views with the engine's preview, which abandons a CSG
+  tree past 100000 normalized terms and draws nothing, while the export of the same
+  part is whole. A difference of 400 bars by 400 slots produced four byte-identical
+  4520-byte PNGs. `render` now refuses on the engine's own line, *"CSG normalization
+  resulted in an empty tree"*, at exit 4 with `origin: null`, and the hint names the
+  remedy: wrap the top level in `render()`. `check` and `measure` are unaffected,
+  since they read the export.
+
 - **`genus` no longer answers on a mesh that touches itself at a vertex** (#437).
   Such a surface is watertight and one solid, because every edge still has its two
   faces, and its Euler characteristic is one higher per touching vertex than either

@@ -978,6 +978,15 @@ def _camera(bbox: tuple[tuple[float, ...], tuple[float, ...]], rot: tuple[float,
 
 _EMPTY_RESULT = "Current top level object is empty"
 
+_PREVIEW_ABANDONED = "CSG normalization resulted in an empty tree"
+"""The engine's preview saying it drew nothing, at exit 0 (#433).
+
+A view is drawn by the preview, which normalizes the CSG tree into a sum of
+products and abandons it past 100000 terms. The export does not normalize, so
+the STL of the same part is whole and every guard asked of it passes. Present
+in 2021.01 and in 2026.10.15, read from the binaries.
+"""
+
 _UNRESOLVED_NAME_MARKERS = (
     # BOTH spellings, because the engines disagree and matching one is F13 in
     # miniature. Measured by running the same missing-include source under each
@@ -1628,6 +1637,18 @@ def render_views(
                         return BuildError(
                             f"openscad exited {proc.returncode} rendering the {view} view",
                             hint=_first_error_line(proc.stderr),
+                            stderr=proc.stderr,
+                        )
+                    if _PREVIEW_ABANDONED in proc.stderr:
+                        # Before the staged file is counted as a view: it exists
+                        # and is a valid PNG of an empty scene, which is how four
+                        # identical frames reached `renders/` at exit 0 (#433).
+                        return BuildError(
+                            f"openscad's preview gave up on this part, so the {view} view "
+                            f"is a picture of an empty scene: {_PREVIEW_ABANDONED}",
+                            hint="the part itself built; wrapping its top level in render() "
+                            "makes the preview draw the evaluated geometry instead",
+                            origin=None,
                             stderr=proc.stderr,
                         )
                     # Asked of the staged file: the scratch directory is this
