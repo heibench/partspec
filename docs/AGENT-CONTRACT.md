@@ -3,6 +3,34 @@
 **Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
+**First screen: what to know before the first `check`.** A tool that truncates this
+file shows about this much, so the essentials are here and the rest is reference.
+
+Read `report.json`, not the console. Only `pass` is green.
+
+| exit | verdict | do |
+|---|---|---|
+| `0` | `pass` | Stop. |
+| `1` | `fail` | Edit the model, never the claims (§2.1). |
+| `2` | `incomplete` | Not disproven, not proven. Leave the geometry alone (§2.2). |
+| `3` | `empty` | The contract asserts nothing. Declare checks. |
+| `4` | `error` | Not about the part. Read `error` and `hint` (§2.3). |
+| `64` | — | Bad invocation. Fix the command. |
+| `130` | — | Interrupted. Stop. |
+
+The report is `<contract dir>/outputs/<part-slug>/report.json` unless `--out` moves it.
+
+Two runs exit `4` beside a report that looks normal, and stderr is the only diagnosis:
+a pin covering a part no target produced, and a `check --render` whose render failed.
+
+Never weaken a claim or delete an `unsupported` check to get green (§4). At most 5
+attempts per part, then escalate (§3).
+
+Read the rest in parts: §1 the loop, §2 outcomes, §3 escalation, §4 out of bounds,
+§5 before believing a green run.
+
+<!-- END FIRST SCREEN -->
+
 **Status:** v1 · 2026-08-08 · closes #28
 **Audience:** an agent (or the harness around one) using `partspec` to take a part to
 green, **via the CLI**.
