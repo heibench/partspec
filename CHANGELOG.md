@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A contract that raises while being imported now exits 4, not 64** (#438).
+  The same `ModuleNotFoundError` exited 64 at the contract's top level, which
+  AGENT-CONTRACT §1 reads as "fix the command", and 4 inside its factory. The
+  command was right both times: the file was found and is a contract.
+  SPEC-report §6.2 already gave "the contract raised" exit 4, so the code now
+  agrees with it. **A consumer branching on 64 for this case sees 4.** An
+  absent file, a non-contract and an unknown factory still exit 64. When the
+  raise is an `ImportError`, either way, stderr now names the interpreter the
+  contract ran in (`sys.executable`) and the two ways to give it a
+  dependency: install partspec into the environment that has it, or
+  `uv tool install partspec --with <package>`. Past agent sessions met four
+  such import failures in three sessions and worked around them four
+  different ways.
+
 - **A stray file at the top of a checkout no longer reaches a locally built
   sdist** (#444). Hatchling builds the sdist from the directory, not the index,
   so any untracked, unignored root file shipped. A sandboxed agent session

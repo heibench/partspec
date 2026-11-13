@@ -760,8 +760,8 @@ def test_a_contract_that_raises_after_its_sibling_import_does_not_poison_the_nex
         "from partspec import Part, openscad\n\n\ndef make():\n"
         "    return shared_claims(Part('b', openscad('m.scad')))\n"
     )
-    # An import-time raise is an unresolvable target: usage, exit 64.
-    assert main(["check", f"{a / 'spec.py'}:make", "--quiet"]) == 64
+    # An import-time raise is a contract error, exit 4 (#438); it still fails resolve.
+    assert main(["check", f"{a / 'spec.py'}:make", "--quiet"]) == 4
     assert main(["check", f"{b / 'spec.py'}:make", "--quiet"]) == 0
     report = report_of(b / "outputs" / "spec-make")
     kinds = {c["kind"] for c in report["checks"]} - {"builds"}
@@ -845,14 +845,14 @@ def test_the_render_verbs_exits_evict_the_sibling(tmp_path: Path):
 
     (tmp_path / "second").mkdir()
     dirs2 = _sibling_pair(tmp_path / "second", raise_in_a=True)
-    assert main(["render", f"{dirs2['a'] / 'spec.py'}:make"]) == 64  # failed resolve
+    assert main(["render", f"{dirs2['a'] / 'spec.py'}:make"]) == 4  # failed resolve (#438)
     _b_is_clean(tmp_path / "second", dirs2)
 
 
 def test_the_measure_verbs_failed_resolve_evicts_the_sibling(tmp_path: Path):
     pytest.importorskip("build123d", reason="occt extra not installed")
     dirs = _sibling_pair(tmp_path, raise_in_a=True)
-    assert main(["measure", f"{dirs['a'] / 'spec.py'}:make"]) == 64
+    assert main(["measure", f"{dirs['a'] / 'spec.py'}:make"]) == 4  # failed resolve (#438)
     _b_is_clean(tmp_path, dirs)
 
 

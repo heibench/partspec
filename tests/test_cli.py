@@ -1544,6 +1544,50 @@ def test_a_contract_calling_sys_exit_is_not_a_green_run(tmp_path: Path):
     assert report_of(out)["verdict"] == "error"
 
 
+MISSING_DEP = "import partspec_test_no_such_dependency\n"
+"""A contract dependency the interpreter cannot have, for #438."""
+
+
+@pytest.mark.parametrize("where", ["import", "factory"])
+def test_a_contract_that_raises_exits_4_wherever_it_raises(tmp_path: Path, where, capsys):
+    """#438: the raise at import exited 64, which AGENT-CONTRACT §1 reads as
+    "fix the command", while the same raise in the factory exited 4. The file
+    was found and is a contract either way, so the command was right."""
+    spec = tmp_path / "spec.py"
+    header = MISSING_DEP if where == "import" else ""
+    body = f"    {MISSING_DEP}" if where == "factory" else ""
+    spec.write_text(
+        f"{header}from partspec import Part, openscad\n\n\n"
+        f"def make() -> Part:\n{body}    return Part('a', openscad('a.scad'))\n"
+    )
+    out = tmp_path / "out"
+    assert main(["check", f"{spec}:make", "--out", str(out), "--quiet"]) == 4
+    assert report_of(out)["verdict"] == "error"
+    err = capsys.readouterr().err
+    assert "ModuleNotFoundError" in err and "the contract is wrong, not the part" in err
+    assert f"the contract runs in partspec's interpreter: {sys.executable}" in err, (
+        "a missing dependency names the interpreter the contract ran in"
+    )
+    assert "uv tool install partspec --with" in err
+
+
+def test_the_interpreter_hint_is_for_import_failures_only(tmp_path: Path, capsys):
+    """A contract bug that is not a missing dependency gets no advice about
+    installing one."""
+    spec = tmp_path / "spec.py"
+    spec.write_text("raise RuntimeError('broken at import')\n")
+    assert main(["check", f"{spec}:make", "--out", str(tmp_path / "out"), "--quiet"]) == 4
+    err = capsys.readouterr().err
+    assert "RuntimeError" in err and "broken at import" in err
+    assert "partspec's interpreter" not in err
+
+
+def test_a_target_that_is_not_there_still_exits_64(tmp_path: Path):
+    """The other resolution failures are still the command's fault."""
+    missing = tmp_path / "absent.py"
+    assert main(["check", f"{missing}:make", "--out", str(tmp_path / "out"), "--quiet"]) == 64
+
+
 def test_argparse_still_owns_its_own_exits():
     """The BaseException guard is scoped to contract resolution, so argparse's
     SystemExit for `--version` and usage errors is untouched."""
