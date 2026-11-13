@@ -492,6 +492,45 @@ def test_the_sdist_ships_nothing_at_the_top_level_that_is_not_on_the_list(
     )
 
 
+def test_an_untracked_file_at_the_top_level_does_not_reach_the_sdist(tmp_path):
+    """The test above judges the sdist this checkout builds, so it cannot tell
+    a leak in the build config from a stray file in one clone. #444 was the
+    second: a sandboxed agent session mounts `.bashrc`, `.mcp.json` and nine
+    more at the root as device nodes, hatchling reads the directory rather than
+    the index, and the top-level test failed on every local run there.
+
+    So build from a fresh clone, carrying this checkout's `pyproject.toml`,
+    with a stray, unignored root file planted, and require that it stays
+    out. Without `only-include` in `pyproject.toml` it ships.
+    """
+    import shutil
+
+    if shutil.which("uv") is None or not (REPO / ".git").is_dir():
+        pytest.skip("builds from a clone of this checkout; needs uv and a .git directory")
+    clone = tmp_path / "clone"
+    subprocess.run(
+        ["git", "clone", "--quiet", "--no-hardlinks", str(REPO), str(clone)],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    # The clone has HEAD's build config; judge this checkout's instead.
+    shutil.copyfile(REPO / "pyproject.toml", clone / "pyproject.toml")
+    (clone / ".bashrc").write_text("")
+    out = tmp_path / "dist"
+    subprocess.run(
+        ["uv", "build", "--sdist", "--out-dir", str(out)],
+        cwd=clone,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    with tarfile.open(next(out.glob("*.tar.gz"))) as archive:
+        names = {name.split("/", 1)[1] for name in archive.getnames() if "/" in name}
+    assert "pyproject.toml" in names, f"the build produced no package: {sorted(names)[:5]}"
+    assert ".bashrc" not in names, "an untracked root file rode into the sdist"
+
+
 def test_the_ok_gate_waits_for_every_job_in_the_workflow():
     """`ok` is the branch-protection gate, so a job missing from its `needs`
     is a job that cannot block a merge.

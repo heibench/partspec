@@ -115,7 +115,36 @@ build-backend = "hatchling.build"
 # The wheel used to need no such list, "because it was already exactly the
 # package" — which was the defect, not the design (#349). See the force-include
 # block below the sdist table.
+#
+# `only-include` makes the top level an allowlist at BUILD time, not only in
+# `test_the_sdist_ships_nothing_at_the_top_level_that_is_not_on_the_list`
+# (#444). Hatchling reads the directory, not the index, so any untracked,
+# unignored file at the root rode into a locally built sdist: a sandboxed agent
+# session mounts `.bashrc`, `.mcp.json` and nine more there as device nodes, and
+# every local build in one shipped them. Under the allowlist a clean checkout
+# builds the same file list as before, and a stray root file stays out. A new
+# top level now has to be added here AND argued for in that test. `exclude`
+# below no longer changes the build (nothing it names is on the allowlist); it
+# stays as the record of what is left out on purpose, which
+# `test_the_sdist_leaves_out_what_a_consumer_cannot_use` asserts.
 [tool.hatch.build.targets.sdist]
+only-include = [
+  "pyproject.toml",
+  "README.md",
+  "LICENSE",
+  "CHANGELOG.md",
+  "AGENTS.md",
+  "SECURITY.md",
+  "src",
+  "tests",
+  "docs",
+  "examples",
+  "skills",
+  "scripts",
+  ".github",
+  ".gitignore",
+  "justfile",
+]
 exclude = [
   "uv.lock",
   "CLAUDE.md",
