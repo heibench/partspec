@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A stray file at the top of a checkout no longer reaches a locally built
+  sdist** (#444). Hatchling builds the sdist from the directory, not the index,
+  so any untracked, unignored root file shipped. A sandboxed agent session
+  mounts eleven such names there as device nodes (`.bashrc`, `.mcp.json`, ...),
+  and the top-level packaging test failed on every local run inside one: 1465
+  passed, 1 failed on a clean `main`. The sdist table now carries an
+  `only-include` of the top-level names that test already argues for, so the
+  top level is an allowlist when the sdist is built, not only when it is
+  tested. A clean checkout builds the same 132 files as before, and a new test
+  builds from a fresh clone with a stray `.bashrc` planted and requires it to
+  stay out. **The published artifact was never affected**: `release.yml` builds
+  from a clean CI checkout.
+
 - **`AGENT-CONTRACT.md` now opens with the exit map, inside what a truncating tool
   shows** (#441). The file is over the inline output limit of the agent harness that
   drives partspec most, so a `cat` of it returns a preview cut within 2000 characters
