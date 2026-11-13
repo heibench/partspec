@@ -67,6 +67,10 @@ NON_CLAIM_FIELDS = {
         "bit-identical on the mesh tier, so run-to-run drift is NOT the reason "
         "— round-2 review of #207.)"
     ),
+    "edges": (
+        "where a failing watertight mesh is open or non-manifold -- a result, "
+        "derived from the exported triangles, as `detail` is; not a claim (#440)"
+    ),
     "phase": (
         "structural, and cannot move without kind or expr moving with it. Not inert, "
         "though: it is the input deciding which tolerance `_value_delta` applies, so it "

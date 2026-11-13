@@ -242,15 +242,38 @@ class MeshBackend:
         """
         if a.is_watertight:
             return None
-        boundary, nonmanifold = _edge_defects(a)
+        boundary, nonmanifold = _defect_edges(a)
         parts = []
-        if boundary:
-            parts.append(f"{boundary} boundary edge(s) — the surface is open")
-        if nonmanifold:
+        if len(boundary):
             parts.append(
-                f"{nonmanifold} non-manifold edge(s) — more than two faces meet along them"
+                f"{len(boundary)} boundary edge(s) — the surface is open, "
+                f"{_first_edges(a, boundary)}"
+            )
+        if len(nonmanifold):
+            parts.append(
+                f"{len(nonmanifold)} non-manifold edge(s) — more than two faces meet "
+                f"along them, {_first_edges(a, nonmanifold)}"
             )
         return "; ".join(parts) or "not watertight for an unclassified reason"
+
+    def watertight_edges(self, a: Any) -> dict[str, Any] | None:
+        """Where a mesh is not watertight: each defect kind's count, its first
+        `EDGES_LISTED` edges as coordinate pairs, and the bounding box of all of
+        them (#440).
+
+        The count said the model was wrong but not which feature, and agents in
+        four projects wrote their own locators to find out. Mesh tier only: a
+        BREP has no such edges to list. None when the mesh is watertight.
+        """
+        if a.is_watertight:
+            return None
+        boundary, nonmanifold = _defect_edges(a)
+        out: dict[str, Any] = {}
+        if len(boundary):
+            out["boundary"] = _edge_inventory(a, boundary)
+        if len(nonmanifold):
+            out["non_manifold"] = _edge_inventory(a, nonmanifold)
+        return out or None
 
     def solid_count(self, a: Any) -> Measurement | Unsupported:
         """Solids, counted over the exported triangles.
@@ -523,10 +546,52 @@ def _edge_defects(mesh: Any) -> tuple[int, int]:
     where more than two sheets meet. They have different causes, different fixes,
     and — see `solid_count` — different consequences for what stays answerable.
     """
+    boundary, nonmanifold = _defect_edges(mesh)
+    return len(boundary), len(nonmanifold)
+
+
+def _defect_edges(mesh: Any) -> tuple[Any, Any]:
+    """The boundary and non-manifold edges themselves, as `(n, 2)` arrays of
+    vertex indices in `np.unique`'s sorted order, so a report lists them the
+    same way on every run of the same mesh (#440)."""
     import numpy as np
 
-    _, counts = np.unique(mesh.edges_sorted, axis=0, return_counts=True)
-    return int((counts == 1).sum()), int((counts > 2).sum())
+    edges, counts = np.unique(mesh.edges_sorted, axis=0, return_counts=True)
+    return edges[counts == 1], edges[counts > 2]
+
+
+EDGES_LISTED = 20
+"""How many defect edges of each kind a report lists (#440). The count and the
+bounding box always cover all of them; the list is where to look first."""
+
+EDGES_ON_CONSOLE = 3
+"""How many of those the one-line `detail` names."""
+
+
+def _point(vertex: Any) -> list[float]:
+    return [round(float(c), 6) for c in vertex]
+
+
+def _edge_inventory(mesh: Any, edges: Any) -> dict[str, Any]:
+    ends = mesh.vertices[edges.reshape(-1)]
+    return {
+        "count": len(edges),
+        "edges": [
+            [_point(mesh.vertices[a]), _point(mesh.vertices[b])] for a, b in edges[:EDGES_LISTED]
+        ],
+        "bbox": [_point(ends.min(axis=0)), _point(ends.max(axis=0))],
+    }
+
+
+def _first_edges(mesh: Any, edges: Any) -> str:
+    def fmt(v: Any) -> str:
+        return "(" + ", ".join(f"{c:g}" for c in _point(v)) + ")"
+
+    shown = ", ".join(
+        f"{fmt(mesh.vertices[a])} to {fmt(mesh.vertices[b])}" for a, b in edges[:EDGES_ON_CONSOLE]
+    )
+    more = len(edges) - EDGES_ON_CONSOLE
+    return f"at {shown}" + (f" and {more} more" if more > 0 else "")
 
 
 def _not_closed(mesh: Any) -> str | None:

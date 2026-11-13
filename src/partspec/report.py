@@ -126,6 +126,12 @@ class CheckResult:
     §7.1.
     """
 
+    edges: dict[str, Any] | None = None
+    """Where a failing `watertight` check's mesh is open or non-manifold:
+    `{"boundary": ..., "non_manifold": ...}`, each `{"count", "edges", "bbox"}`
+    with up to 20 edges as coordinate pairs and the bounding box of all of them
+    (#440). Mesh tier only, and diagnostic like `intrusion`. Additive per §7.1.
+    """
     hole: dict[str, Any] | None = None
     """The declared bore of a `hole_diameter` check — `{"d": ..., "count": ...}`
     — on the same principle as `region`. Additive per §7.1."""
@@ -166,6 +172,8 @@ class CheckResult:
             out["step"] = self.step
         if self.intrusion is not None:
             out["intrusion"] = self.intrusion
+        if self.edges is not None:
+            out["edges"] = self.edges
         if self.hole is not None:
             out["hole"] = self.hole
         if self.source is not None:

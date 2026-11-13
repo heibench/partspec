@@ -638,7 +638,12 @@ def _run_geometry_check(spec: CheckSpec, backend: Any, artifact: Any) -> CheckRe
     status = adjudicate(outcome, spec.limit)
     components = _components_of(outcome, spec.limit)
     detail = None
+    edges = None
     if status is Status.FAIL:
+        # Where, not only how many (#440): the mesh tier lists the defect edges.
+        locate = getattr(backend, f"{spec.kind}_edges", None)
+        if locate is not None:
+            edges = locate(artifact)
         # A backend that knows something better than the numbers says it —
         # `watertight_detail` distinguishes a hole from a non-manifold junction,
         # which no comparison of value to limit can.
@@ -663,7 +668,12 @@ def _run_geometry_check(spec: CheckSpec, backend: Any, artifact: Any) -> CheckRe
                 else _failing_scalar(outcome, spec.limit)
             )
     return CheckResult(
-        **common, status=status, measurement=outcome, components=components, detail=detail
+        **common,
+        status=status,
+        measurement=outcome,
+        components=components,
+        detail=detail,
+        edges=edges,
     )
 
 
