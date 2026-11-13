@@ -204,6 +204,90 @@ def test_watertight_detail_is_none_when_fine(backend: MeshBackend):
     assert backend.watertight_detail(trimesh.creation.box(extents=(1, 1, 1))) is None
 
 
+def _two_tetrahedra_sharing_an_edge():
+    """Closed, but non-manifold along the one edge (0,0,0)-(0,0,1)."""
+    verts = [[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1], [-1, 0, 0], [0, -1, 0]]
+    faces = [[0, 1, 2], [0, 1, 3], [0, 2, 3], [1, 2, 3], [0, 4, 5], [0, 4, 3], [0, 5, 3], [4, 5, 3]]
+    return trimesh.Trimesh(vertices=verts, faces=faces, process=False)
+
+
+@needs_mesh
+def test_a_watertight_failure_says_where_the_bad_edges_are(backend: MeshBackend):
+    """#440: the count said the model was wrong but not which feature, and
+    agents wrote their own locators to find out. The edge is named by its two
+    end points, in the report entry and on the console line."""
+    located = backend.watertight_edges(_two_tetrahedra_sharing_an_edge())
+    assert located == {
+        "non_manifold": {
+            "count": 1,
+            "edges": [[[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]]],
+            "bbox": [[0.0, 0.0, 0.0], [0.0, 0.0, 1.0]],
+        }
+    }, "only the defect present is reported, and it is the shared edge"
+    detail = backend.watertight_detail(_two_tetrahedra_sharing_an_edge())
+    assert detail is not None and "at (0, 0, 0) to (0, 0, 1)" in detail, detail
+
+    open_shell = trimesh.Trimesh(
+        vertices=[[0, 0, 0], [1, 0, 0], [0, 1, 0], [0, 0, 1]],
+        faces=[[0, 1, 2], [0, 1, 3], [0, 2, 3]],
+    )
+    located = backend.watertight_edges(open_shell)
+    assert located is not None and set(located) == {"boundary"}
+    assert located["boundary"]["count"] == 3, "the missing face's three edges"
+    assert sorted(map(sorted, located["boundary"]["edges"])) == sorted(
+        map(sorted, [[[1, 0, 0], [0, 1, 0]], [[1, 0, 0], [0, 0, 1]], [[0, 1, 0], [0, 0, 1]]])
+    )
+
+    assert backend.watertight_edges(trimesh.creation.box(extents=(1, 1, 1))) is None
+
+
+@needs_mesh
+def test_the_edge_list_is_capped_and_the_count_and_bbox_are_not(backend: MeshBackend):
+    """A long seam lists twenty edges, while `count` and `bbox` still cover all
+    of them, so a capped list never hides how much is wrong or where it ends."""
+    from partspec.backends.mesh import EDGES_LISTED
+
+    sphere = trimesh.creation.icosphere(subdivisions=3)
+    upper = sphere.triangles_center[:, 2] > 0
+    dome = trimesh.Trimesh(vertices=sphere.vertices, faces=sphere.faces[upper], process=False)
+    located = backend.watertight_edges(dome)
+    assert located is not None
+    rim = located["boundary"]
+    assert rim["count"] > EDGES_LISTED, "premise: the rim is longer than the cap"
+    assert len(rim["edges"]) == EDGES_LISTED
+    # The rim found a second way, counting each face's edges in plain Python: the
+    # box spans the whole rim, not the listed part of it. Not `dome.outline()`,
+    # which needs scipy, absent from the mesh-only install this suite also runs in.
+    from collections import Counter
+
+    uses = Counter(
+        tuple(sorted((int(a), int(b))))
+        for f in dome.faces
+        for a, b in ((f[0], f[1]), (f[1], f[2]), (f[2], f[0]))
+    )
+    ends = dome.vertices[[v for edge, n in uses.items() if n == 1 for v in edge]]
+    assert rim["count"] == sum(1 for n in uses.values() if n == 1)
+    expected = [ends.min(axis=0).round(6).tolist(), ends.max(axis=0).round(6).tolist()]
+    assert rim["bbox"] == expected, (rim["bbox"], expected)
+    detail = backend.watertight_detail(dome)
+    assert detail is not None and f"and {rim['count'] - 3} more" in detail, detail
+
+
+@needs_mesh
+def test_the_edges_reach_the_report_entry_of_a_failing_check(backend: MeshBackend):
+    """Wired through the runner, and only on a failure."""
+    from partspec.contract import CheckSpec
+    from partspec.runner import _run_geometry_check
+    from partspec.status import Limit
+
+    spec = CheckSpec(id="watertight", kind="watertight", phase="geometry", limit=Limit(equals=True))
+    failing = _run_geometry_check(spec, backend, _two_tetrahedra_sharing_an_edge()).to_json()
+    assert failing["status"] == "fail"
+    assert failing["edges"]["non_manifold"]["count"] == 1
+    passing = _run_geometry_check(spec, backend, trimesh.creation.box(extents=(1, 1, 1))).to_json()
+    assert passing["status"] == "pass" and "edges" not in passing
+
+
 @needs_mesh
 def test_solid_count_without_scipy(backend: MeshBackend):
     """trimesh's `body_count` needs scipy, which the mesh extra does not install."""

@@ -86,6 +86,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   function exists to prevent. **The refusal is unchanged in every case**;
   `docs/AGENT-CONTRACT.md` 2.3 catches up on both sentences that over-claimed.
 
+### Added
+
+- **A failing `watertight` check now says where the bad edges are** (#440). It
+  counted boundary and non-manifold edges but never located them, so agents in
+  four projects wrote their own edge locators, one of them used on about 12
+  parts. On the mesh tier the check entry now carries `edges` (SPEC-report §7.1):
+  for each defect present, its `count`, up to 20 edges as coordinate pairs, and
+  the `bbox` of all of them. The console line names the first three. Two cubes
+  sharing an edge now print `FAIL watertight — 1 non-manifold edge(s) — more
+  than two faces meet along them, at (10, 10, 0) to (10, 10, 10)`. Additive, with
+  no schema bump; `diff` treats it as a result, not a claim.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added

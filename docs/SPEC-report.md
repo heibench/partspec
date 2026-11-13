@@ -996,6 +996,14 @@ Note there is **no `approximate` check here, and there cannot be one in v0** —
   than adjudicated, which is why it is a field of its own and not part of
   `measurement`: that carries one unit, and this carries mm beside mm3. Additive (no
   schema bump).
+- **`checks[].edges`** — on a failing `watertight` check, from a tier that can name the
+  edges (the mesh tier today), so a consumer MUST treat it as optional. It says where the
+  surface is open or non-manifold: `boundary` and `non_manifold`, each present only when
+  that defect is, and each `{"count", "edges", "bbox"}`. `edges` lists at most 20, as
+  `[[x, y, z], [x, y, z]]` pairs in model coordinates; `count` and `bbox` (`[min, max]`
+  corners) cover all of them. The listed edges follow vertex-index order, so they are
+  stable across runs of the same mesh but are not ranked. Diagnostic, like `intrusion`;
+  `detail` names the first three. Additive (no schema bump).
 - **`checks[].direction`** — present only on `draft_angle` checks: the pull axis the draft
   was measured against, as `[x, y, z]`. Part of the claim's identity, not context — the same
   part measures differently under a different pull, so a draft claim without its axis is not
