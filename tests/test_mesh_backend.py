@@ -255,9 +255,19 @@ def test_the_edge_list_is_capped_and_the_count_and_bbox_are_not(backend: MeshBac
     rim = located["boundary"]
     assert rim["count"] > EDGES_LISTED, "premise: the rim is longer than the cap"
     assert len(rim["edges"]) == EDGES_LISTED
-    # Against trimesh's own outline of the open edges, an independent route to
-    # the same set: the box spans the whole rim, not the listed part of it.
-    expected = dome.outline().bounds.round(6).tolist()
+    # The rim found a second way, counting each face's edges in plain Python: the
+    # box spans the whole rim, not the listed part of it. Not `dome.outline()`,
+    # which needs scipy, absent from the mesh-only install this suite also runs in.
+    from collections import Counter
+
+    uses = Counter(
+        tuple(sorted((int(a), int(b))))
+        for f in dome.faces
+        for a, b in ((f[0], f[1]), (f[1], f[2]), (f[2], f[0]))
+    )
+    ends = dome.vertices[[v for edge, n in uses.items() if n == 1 for v in edge]]
+    assert rim["count"] == sum(1 for n in uses.values() if n == 1)
+    expected = [ends.min(axis=0).round(6).tolist(), ends.max(axis=0).round(6).tolist()]
     assert rim["bbox"] == expected, (rim["bbox"], expected)
     detail = backend.watertight_detail(dome)
     assert detail is not None and f"and {rim['count'] - 3} more" in detail, detail
