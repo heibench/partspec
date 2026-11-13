@@ -29,7 +29,7 @@ from .install import install_hint
 from .report import tool_version, write_placeholder
 from .runner import run
 from .status import EXIT_USAGE, ContractError, Status, Verdict, exit_code
-from .target import Target, TargetError, resolve
+from .target import ContractImportError, Target, TargetError, resolve
 
 __all__ = ["main"]
 
@@ -737,6 +737,25 @@ def _build_to_file(
         )
 
 
+def _print_interpreter_hint(exc: BaseException) -> None:
+    """Say which interpreter the contract ran in, when it failed to import a
+    dependency (#438).
+
+    A contract executes in partspec's own interpreter, not the project's, so a
+    package installed in the project is absent when partspec runs as a uv tool.
+    Agents met this as a bare `ModuleNotFoundError` and worked around it four
+    ways; the two supported fixes are named here.
+    """
+    if not isinstance(exc, ImportError):
+        return
+    print(
+        f"  the contract runs in partspec's interpreter: {sys.executable}\n"
+        "  to give it a dependency, install partspec into the environment that has it,\n"
+        "  or add it to the tool: uv tool install partspec --with <package>",
+        file=sys.stderr,
+    )
+
+
 def _resolve_or_report(spec: str) -> tuple[Part, Target] | int:
     """Resolve a target, turning any failure into an exit code rather than a
     traceback.
@@ -770,6 +789,19 @@ def _resolve_or_report(spec: str) -> tuple[Part, Target] | int:
         if part.source.engine != "openscad":
             record_model_modules(part.source.path, modules_before)
         return part, target
+    except ContractImportError as exc:
+        # The file was found and is a contract; its own code raised while
+        # importing. Exit 4 like the same raise in a factory, not 64, which
+        # says "fix the command" when the command was right (#438).
+        cause = exc.__cause__ or exc
+        _print_contract_traceback(cause)
+        print(
+            f"\npartspec: the contract raised {type(cause).__name__} on import: {cause}",
+            file=sys.stderr,
+        )
+        print("  the contract is wrong, not the part", file=sys.stderr)
+        _print_interpreter_hint(cause)
+        return exit_code(Verdict.ERROR)
     except TargetError as exc:
         print(f"partspec: {exc}", file=sys.stderr)
         return EXIT_USAGE
@@ -787,6 +819,7 @@ def _resolve_or_report(spec: str) -> tuple[Part, Target] | int:
         _print_contract_traceback(exc)
         print(f"\npartspec: the contract raised {type(exc).__name__}: {exc}", file=sys.stderr)
         print("  the contract is wrong, not the part", file=sys.stderr)
+        _print_interpreter_hint(exc)
         return exit_code(Verdict.ERROR)
     finally:
         # Parseable without resolution, so the record exists on every outcome.

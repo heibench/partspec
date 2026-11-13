@@ -19,11 +19,22 @@ from types import ModuleType
 
 from .contract import Part, Source
 
-__all__ = ["Target", "TargetError", "factories", "resolve"]
+__all__ = ["ContractImportError", "Target", "TargetError", "factories", "resolve"]
 
 
 class TargetError(Exception):
     """The target could not be resolved. Exits 64 and writes no report."""
+
+
+class ContractImportError(TargetError):
+    """The contract's own code raised while it was being imported (#438).
+
+    A `TargetError` so that callers suppressing resolution failures still do,
+    but the CLI does not route it to 64: the file was found and is a contract,
+    so the invocation was right and the contract is wrong. That is exit 4, the
+    same as the same raise inside a factory. The original exception is
+    `__cause__`.
+    """
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,7 +162,9 @@ def _load(path: Path) -> ModuleType:
     except BaseException as exc:
         # BaseException: `sys.exit(0)` at contract import scope is user code
         # choosing our exit status, and it chose green.
-        raise TargetError(f"contract raised on import: {type(exc).__name__}: {exc}") from exc
+        raise ContractImportError(
+            f"contract raised on import: {type(exc).__name__}: {exc}"
+        ) from exc
     finally:
         if added:
             sys.path.remove(parent)
