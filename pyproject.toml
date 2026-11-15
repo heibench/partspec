@@ -1,6 +1,6 @@
 [project]
 name = "partspec"
-version = "0.8.0"
+version = "0.9.0"
 description = "Verify CAD-as-code parts against declared engineering intent."
 readme = "README.md"
 requires-python = ">=3.12"
@@ -8,7 +8,7 @@ license = "Apache-2.0"
 authors = [{ name = "Cameron Brooks" }]
 keywords = ["cad", "openscad", "build123d", "cadquery", "verification"]
 classifiers = [
-    "Development Status :: 2 - Pre-Alpha",
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Manufacturing",
     "Topic :: Scientific/Engineering",
 ]

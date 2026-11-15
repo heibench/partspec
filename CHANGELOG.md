@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-11-15
+
+### Added
+
+- **A failing `watertight` check now says where the bad edges are** (#440). It
+  counted boundary and non-manifold edges but never located them, so agents in
+  four projects wrote their own edge locators, one of them used on about 12
+  parts. On the mesh tier the check entry now carries `edges` (SPEC-report §7.1):
+  for each defect present, its `count`, up to 20 edges as coordinate pairs, and
+  the `bbox` of all of them. The console line names the first three. Two cubes
+  sharing an edge now print `FAIL watertight — 1 non-manifold edge(s) — more
+  than two faces meet along them, at (10, 10, 0) to (10, 10, 10)`. Additive, with
+  no schema bump; `diff` treats it as a result, not a claim.
+
+### Changed
+
+- **partspec is now marked alpha, not pre-alpha.** The PyPI classifier is
+  `Development Status :: 3 - Alpha` and the README and AGENTS status lines say
+  `alpha`. It runs end to end and is dogfooded on real parts; its interfaces
+  can still move before 1.0, as one exit code does in #438 below, and
+  `docs/DECISIONS.md` D19 says what 1.0 has to prove.
+
+- **The `occt` and `cadquery` extras accept build123d 0.12 and 0.13** (#454).
+  Both capped it below 0.12, so a project depending on `partspec[occt]` was
+  held at build123d 0.11.1 and OCP 7.9. build123d 0.13 runs on OCP 8, which
+  moved the two shape maps the OCCT backend uses from `OCP.TopTools` to
+  `OCP.collections` under new names: before this change, the whole suite
+  against an `[occt]` install that resolved build123d 0.13 gave 61 failed,
+  1142 passed.
+  The backend now takes either spelling. What an install resolves, with
+  `uv pip compile --no-config --python-version 3.12`: `[occt]` gets build123d
+  0.13.0 on OCP 8.0.1.1.0, and `[cadquery]` gets build123d 0.12.0 on OCP
+  7.9.3.1.1, because CadQuery 2.8 still requires OCP below 8 and the OCP
+  wheels now share a version-pinned `cadquery-ocp-proxy` that keeps the two
+  majors from being installed together.
+
+- **`check`'s summary says when a built part was never drawn** (#456). A
+  session ran `check` without `--render` on ten parts, and three defects a
+  human then found in a slicer preview had passed every check (`PASS: 15
+  pass`); nothing on the console said no view had been written. The verdict
+  line now ends `· not rendered` when the part built and the run wrote no
+  views, as in `PASS: 8 pass · not rendered`. A part declared `empty` has
+  nothing to draw and gets no note. Console only: `report.json` already shows
+  it by having no `renders` key, and the exit code is unchanged.
+
 ### Fixed
 
 - **`empty` no longer passes on a model whose own `assert()` failed** (#400).
@@ -17,9 +62,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `ok empty` and `PASS` at exit 0; it now fails both, at exit 1, and the
   `empty` detail reads *the model's own assert() failed and the engine stopped
   evaluating it, so the geometry never existed to be empty of:* followed by the
-  engine's line. Measured on OpenSCAD 2021.01 and 2026.10.15. The line is
-  matched at its head, `ERROR: Assertion '`, so a model that `echo()`es the
-  same text does not trip it.
+  engine's line. Measured on OpenSCAD 2021.01 and 2026.10.15, and CI runs the
+  test on 2021.01 and 2026.08.01. The line is matched at its head,
+  `ERROR: Assertion '`, so a model that `echo()`es the same text does not trip
+  it.
 
 - **The bundled skills now say where the worked examples are** (#436). The
   contract-authoring, openscad-authoring and build123d-authoring skills send
@@ -71,8 +117,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   refusal was `could not load contract: <path>` at exit 64 and nothing else, and it
   was the commonest first-run error in the agent sessions reviewed: seven calls met
   it, and one agent refused on a `.scad` tried a YAML contract next and read the same
-  sentence. For a
-  `.scad` the message now prints the three-line probe from `SPEC-contract.md` §7 with
+  sentence. For a `.scad` the message now prints the three-line probe from `SPEC-contract.md` §7 with
   the path filled in, which `measure` and `render` accept as it stands. Any other
   non-Python file gets the form `<file>.py[:<factory>]`. The exit code is unchanged.
 
@@ -116,42 +161,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   leaving the fourth asserting would be the three-different-accounts outcome that
   function exists to prevent. **The refusal is unchanged in every case**;
   `docs/AGENT-CONTRACT.md` 2.3 catches up on both sentences that over-claimed.
-
-### Added
-
-- **A failing `watertight` check now says where the bad edges are** (#440). It
-  counted boundary and non-manifold edges but never located them, so agents in
-  four projects wrote their own edge locators, one of them used on about 12
-  parts. On the mesh tier the check entry now carries `edges` (SPEC-report §7.1):
-  for each defect present, its `count`, up to 20 edges as coordinate pairs, and
-  the `bbox` of all of them. The console line names the first three. Two cubes
-  sharing an edge now print `FAIL watertight — 1 non-manifold edge(s) — more
-  than two faces meet along them, at (10, 10, 0) to (10, 10, 10)`. Additive, with
-  no schema bump; `diff` treats it as a result, not a claim.
-
-### Changed
-
-- **The `occt` and `cadquery` extras accept build123d 0.12 and 0.13** (#454).
-  Both capped it below 0.12, so a project depending on `partspec[occt]` was
-  held at build123d 0.11.1 and OCP 7.9. build123d 0.13 runs on OCP 8, which
-  moved the two shape maps the OCCT backend uses from `OCP.TopTools` to
-  `OCP.collections` under new names: on main, the whole suite against an
-  `[occt]` install that resolved build123d 0.13 gave 61 failed, 1142 passed.
-  The backend now takes either spelling. What an install resolves, with
-  `uv pip compile --no-config --python-version 3.12`: `[occt]` gets build123d
-  0.13.0 on OCP 8.0.1.1.0, and `[cadquery]` gets build123d 0.12.0 on OCP
-  7.9.3.1.1, because CadQuery 2.8 still requires OCP below 8 and the OCP
-  wheels now share a version-pinned `cadquery-ocp-proxy` that keeps the two
-  majors from being installed together.
-
-- **`check`'s summary says when a built part was never drawn** (#456). A
-  session ran `check` without `--render` on ten parts, and three defects a
-  human then found in a slicer preview had passed every check (`PASS: 15
-  pass`); nothing on the console said no view had been written. The verdict
-  line now ends `· not rendered` when the part built and the run wrote no
-  views, as in `PASS: 8 pass · not rendered`. A part declared `empty` has
-  nothing to draw and gets no note. Console only: `report.json` already shows
-  it by having no `renders` key, and the exit code is unchanged.
 
 ## [0.8.0] - 2026-09-06
 
@@ -4661,7 +4670,8 @@ callouts, and reports become comparable.
 [convergence-evals]: https://github.com/heibench/partspec/blob/main/evals/CONVERGENCE.md
 [dogfood-results]: https://github.com/heibench/partspec/blob/main/notes/dogfood-results.md
 
-[Unreleased]: https://github.com/heibench/partspec/compare/v0.8.0...HEAD
+[Unreleased]: https://github.com/heibench/partspec/compare/v0.9.0...HEAD
+[0.9.0]: https://github.com/heibench/partspec/compare/v0.8.0...v0.9.0
 [0.8.0]: https://github.com/heibench/partspec/compare/v0.7.8...v0.8.0
 [0.7.8]: https://github.com/heibench/partspec/compare/v0.7.7...v0.7.8
 [0.7.7]: https://github.com/heibench/partspec/compare/v0.7.6...v0.7.7
