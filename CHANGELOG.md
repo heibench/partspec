@@ -113,6 +113,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   wheels now share a version-pinned `cadquery-ocp-proxy` that keeps the two
   majors from being installed together.
 
+- **`check`'s summary says when a built part was never drawn** (#456). A
+  session ran `check` without `--render` on ten parts, and three defects a
+  human then found in a slicer preview had passed every check (`PASS: 15
+  pass`); nothing on the console said no view had been written. The verdict
+  line now ends `· not rendered` when the part built and the run wrote no
+  views, as in `PASS: 8 pass · not rendered`. A part declared `empty` has
+  nothing to draw and gets no note. Console only: `report.json` already shows
+  it by having no `renders` key, and the exit code is unchanged.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added
