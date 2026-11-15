@@ -989,7 +989,7 @@ names the line. Engines own those strings, so the classification is made in the 
 and carried on `BuildError` (`produced_nothing`, `unresolved`) rather than by the runner
 reading stderr.
 
-Three causes reach the guard and the detail MUST name the one it found, because the
+Four causes reach the guard and the detail MUST name the one it found, because the
 remedies do not overlap. A name that did not resolve is *the engine could not resolve a
 name*; a value the engine could not convert — where it substitutes the module's own
 default — is *the engine could not convert a value and built a default in place of it*.
@@ -1005,6 +1005,15 @@ applied and substitutes nothing, so the detail says only *the engine could not u
 value as written* (#360). The refusal is the same — the source is wrong, and stderr
 cannot say which of the shapes it is in (`FAILURE-MODES.md` 9b) — and the sentence
 claims only what was observed.
+
+The fourth is the model's own `assert()` failing, which 2021.01 and 2026.10.15 both report
+as `ERROR: Assertion '<expression>' failed`, matched at the head of the line so an `echo()`
+of that text cannot raise it (#400). An assertion stops evaluation, so on both the model
+renders nothing at exit 1 — the null-intersection outcome exactly. The detail is *the model's own
+assert() failed and the engine stopped evaluating it*, and `builds` fails with it: the
+engine never produced the part. Measured on 2021.01 and 2026.10.15, an interference
+probe whose first child asserts, over two cubes that overlap by 500 mm³, passed `empty`
+at exit 0 before this guard.
 
 A Python model has no equivalent hazard on either cause: an unresolved name raises, and
 so does a value of the wrong type — neither silently renders empty, and no Python CAD
