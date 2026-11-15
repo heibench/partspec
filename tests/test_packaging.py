@@ -992,7 +992,7 @@ def test_the_readme_and_agents_status_lines_name_that_same_version():
     for name in ("README.md", "AGENTS.md"):
         text = (REPO / name).read_text()
         status = next(
-            (line for line in text.splitlines() if "Status:" in line and "pre-alpha" in line),
+            (line for line in text.splitlines() if "Status:" in line and "PyPI" in line),
             None,
         )
         assert status is not None, f"{name} has no status line to check"

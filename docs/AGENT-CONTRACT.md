@@ -1,6 +1,6 @@
 # The agent contract — driving partspec in a repair loop
 
-**Applies to:** v0.8.0 — the release this text describes. The `Status:` line records when
+**Applies to:** v0.9.0 — the release this text describes. The `Status:` line records when
 this document was last revised in substance; it is provenance, not currency (#300).
 
 **First screen: what to know before the first `check`.** A tool that truncates this
