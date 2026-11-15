@@ -1503,6 +1503,30 @@ def test_the_unresolved_markers_match_both_engine_spellings():
     )
 
 
+def test_a_failed_assertion_is_carried_first_and_cannot_be_echoed():
+    """The evidence `empty` refuses on when a model's `assert()` stops it (#400).
+
+    Stderr as 2021.01 and 2026.10.15 both print it for a failed assertion with a
+    message, with the TRACE lines between. Engine-free, so the jobs with no
+    OpenSCAD still hold it. The assertion comes before a name warning because it
+    is what stopped the model, and `empty`'s detail quotes the first entry.
+    """
+    stderr = (
+        "WARNING: Ignoring unknown module 'nope' in file probe.scad, line 3\n"
+        "ERROR: Assertion 'false' failed: \"model rejected its inputs\" in file probe.scad, "
+        "line 1\n"
+        "TRACE: called by 'assert' in file probe.scad, line 1\n"
+        "Current top level object is empty.\n"
+    )
+    found = openscad._not_the_source(stderr)
+    assert found[0].startswith("ERROR: Assertion 'false' failed"), found
+    assert "Ignoring unknown module 'nope'" in found[1], found
+
+    # What `echo()` prints for a source that writes the sentence itself.
+    echoed = "ECHO: \"ERROR: Assertion 'false' failed\"\nCurrent top level object is empty.\n"
+    assert openscad._not_the_source(echoed) == ()
+
+
 def test_the_substituted_value_markers_match_both_engine_spellings():
     """A value the engine could not convert, and defaulted, on a render that won.
 

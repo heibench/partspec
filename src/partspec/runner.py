@@ -1657,6 +1657,12 @@ _UNRESOLVED_NAME_HINT = (
     "OPENSCADPATH. Fix the name or install the library, then re-run"
 )
 
+_FAILED_ASSERTION_CAUSE = "the model's own assert() failed and the engine stopped evaluating it"
+_FAILED_ASSERTION_HINT = (
+    "the model rejected the values it was given, so nothing was built — fix the "
+    "parameters or the model so the assertion holds, then re-run"
+)
+
 _CSG_FILE_LITERAL = re.compile(r'\bfile\s*=\s*"([^"\n]*)"')
 
 
@@ -1897,6 +1903,11 @@ def _unresolved_diagnosis(line: str) -> tuple[str, str, bool]:
     The substitution text is unchanged for the marker it was measured on, and
     the weaker text is what an unrecognised substitution marker falls to.
 
+    A failed `assert()` is the fourth (#400), and the one cause that reaches only
+    the build-failure arm: it stops evaluation, so the render is empty and never
+    succeeds. It is the strongest of the four -- the model refused the values it
+    was given -- so it supports "never existed".
+
     **The third element is the CONSEQUENCE's strength**, and it is here for the
     reason the cause is: four callers append their own sentence, and three of
     them asserted flatly that the artifact is not the part (#375). For two of the
@@ -1915,8 +1926,10 @@ def _unresolved_diagnosis(line: str) -> tuple[str, str, bool]:
     drift apart -- three hedging while the fourth asserts is the
     three-different-accounts outcome this function exists to prevent.
     """
-    from .engines.openscad import _message, is_substituted_value
+    from .engines.openscad import _message, is_failed_assertion, is_substituted_value
 
+    if is_failed_assertion(line):
+        return _FAILED_ASSERTION_CAUSE, _FAILED_ASSERTION_HINT, True
     if is_substituted_value(line):
         if _message(line).startswith(_DEFAULTED_VALUE_MARKER):
             return _SUBSTITUTED_VALUE_CAUSE, _SUBSTITUTED_VALUE_HINT, True

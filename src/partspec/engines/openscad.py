@@ -766,7 +766,7 @@ def render(
                     hint=reason,
                     stderr=proc.stderr,
                     produced_nothing=_EMPTY_RESULT in proc.stderr,
-                    unresolved=_unresolved_lines(proc.stderr),
+                    unresolved=_not_the_source(proc.stderr),
                 )
             # OpenSCAD exits 0 on some degenerate input while writing nothing
             # useful, so the artifact is checked rather than the exit code
@@ -786,7 +786,7 @@ def render(
                     # make `empty` answer differently on two engines for one
                     # source, which is F13 all over again.
                     produced_nothing=True,
-                    unresolved=_unresolved_lines(proc.stderr),
+                    unresolved=_not_the_source(proc.stderr),
                 )
             if closure.partial:
                 # The exact question #223's guard could not ask, asked where it
@@ -1351,6 +1351,34 @@ def _unresolved_lines(
         )
         and not _reaches_no_geometry(line)
     )
+
+
+_FAILED_ASSERTION = "ERROR: Assertion '"
+"""How the engine begins the line for a failed `assert()` (#400), the same on 2021.01
+and 2026.10.15:
+
+    ERROR: Assertion 'false' failed: "model rejected its inputs" in file probe.scad, line 1
+
+Anchored at the head of the whole line, severity included: `echo()` prints its
+argument after `ECHO: `, so a model cannot write this line by echoing it."""
+
+
+def is_failed_assertion(line: str) -> bool:
+    """Whether a line reports one of the model's own `assert()`s failing."""
+    return line.strip().startswith(_FAILED_ASSERTION)
+
+
+def _not_the_source(stderr: str) -> tuple[str, ...]:
+    """Why a render that produced nothing did not build the source as described.
+
+    The unresolved names and unconverted values of `_unresolved_lines`, after any
+    failed assertion. A failed `assert()` stops evaluation, so on 2021.01 and
+    2026.10.15 alike the result is `Current top level object is empty.` at exit 1, which
+    is what a genuinely null intersection prints too (#400). It comes first
+    because it is what stopped the model: the quoted line is the first entry.
+    """
+    failed = tuple(line.strip() for line in stderr.splitlines() if is_failed_assertion(line))
+    return (*failed, *_unresolved_lines(stderr))
 
 
 def _message(line: str) -> str:
