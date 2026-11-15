@@ -165,6 +165,30 @@ _EULER_ENTITIES = {
 }
 
 
+def _shape_maps() -> tuple[Any, Any]:
+    """The indexed shape map and the shape -> shapes map, on either OCP major.
+
+    OCP 8 (build123d 0.13) moved them from `OCP.TopTools` to `OCP.collections`
+    under template names; OCP 7.9 (build123d 0.11-0.12, and every CadQuery 2.x)
+    has only the old ones (#454).
+    """
+    try:
+        from OCP.collections import (  # pyright: ignore[reportMissingImports]
+            IndexedDataMap_TopoDS_Shape_List_TopoDS_Shape_TopTools_ShapeMapHasher as data_map,
+        )
+        from OCP.collections import (  # pyright: ignore[reportMissingImports]
+            IndexedMap_TopoDS_Shape_TopTools_ShapeMapHasher as index_map,
+        )
+    except ImportError:
+        from OCP.TopTools import (
+            TopTools_IndexedDataMapOfShapeListOfShape as data_map,  # pyright: ignore[reportAttributeAccessIssue]
+        )
+        from OCP.TopTools import (
+            TopTools_IndexedMapOfShape as index_map,  # pyright: ignore[reportAttributeAccessIssue]
+        )
+    return index_map, data_map
+
+
 def _not_closed(body: Any) -> str | None:
     """Why this solid's boundary is not closed, or None if it is.
 
@@ -205,15 +229,14 @@ def _not_closed(body: Any) -> str | None:
     from OCP.TopAbs import TopAbs_ShapeEnum  # type: ignore[attr-defined]
     from OCP.TopExp import TopExp  # type: ignore[attr-defined]
     from OCP.TopoDS import TopoDS
-    from OCP.TopTools import TopTools_IndexedDataMapOfShapeListOfShape  # type: ignore[attr-defined]
 
-    uses = TopTools_IndexedDataMapOfShapeListOfShape()
+    uses = _shape_maps()[1]()
     TopExp.MapShapesAndAncestors_s(
         body.wrapped, TopAbs_ShapeEnum.TopAbs_EDGE, TopAbs_ShapeEnum.TopAbs_FACE, uses
     )
     unshared = 0
     for i in range(1, uses.Extent() + 1):
-        if BRep_Tool.Degenerated_s(TopoDS.Edge_s(uses.FindKey(i))):
+        if BRep_Tool.Degenerated_s(TopoDS.Edge(uses.FindKey(i))):  # pyright: ignore[reportAttributeAccessIssue]
             continue
         if uses.FindFromIndex(i).Extent() != 2:
             unshared += 1
@@ -1214,8 +1237,8 @@ class OcctBackend:
         from OCP.gp import gp_Pnt  # type: ignore[attr-defined]
         from OCP.TopAbs import TopAbs_EDGE, TopAbs_IN, TopAbs_ON  # type: ignore[attr-defined]
         from OCP.TopExp import TopExp  # type: ignore[attr-defined]
-        from OCP.TopTools import TopTools_IndexedMapOfShape  # type: ignore[attr-defined]
 
+        shape_map = _shape_maps()[0]
         faces = a.faces()
         solid = a.wrapped
 
@@ -1287,11 +1310,11 @@ class OcctBackend:
                 best, witness = span, f"face_{index} self-span"
 
         # -- adjacency by shared edges (IsSame-keyed via OCCT maps) ---------
-        global_edges = TopTools_IndexedMapOfShape()
+        global_edges = shape_map()
         TopExp.MapShapes_s(solid, TopAbs_EDGE, global_edges)
         edge_sets: list[set[int]] = []
         for face in faces:
-            face_edges = TopTools_IndexedMapOfShape()
+            face_edges = shape_map()
             TopExp.MapShapes_s(face.wrapped, TopAbs_EDGE, face_edges)
             edge_sets.append(
                 {
@@ -1388,9 +1411,10 @@ class OcctBackend:
         from OCP.IntCurvesFace import IntCurvesFace_ShapeIntersector  # type: ignore[attr-defined]
         from OCP.TopAbs import TopAbs_FACE  # type: ignore[attr-defined]
         from OCP.TopExp import TopExp  # type: ignore[attr-defined]
-        from OCP.TopTools import TopTools_IndexedMapOfShape  # type: ignore[attr-defined]
 
-        face_map = TopTools_IndexedMapOfShape()
+        shape_map = _shape_maps()[0]
+
+        face_map = shape_map()
         TopExp.MapShapes_s(a.wrapped, TopAbs_FACE, face_map)
         intersector = IntCurvesFace_ShapeIntersector()
         intersector.Load(a.wrapped, 1e-9)

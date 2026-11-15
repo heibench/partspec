@@ -98,6 +98,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   than two faces meet along them, at (10, 10, 0) to (10, 10, 10)`. Additive, with
   no schema bump; `diff` treats it as a result, not a claim.
 
+### Changed
+
+- **The `occt` and `cadquery` extras accept build123d 0.12 and 0.13** (#454).
+  Both capped it below 0.12, so a project depending on `partspec[occt]` was
+  held at build123d 0.11.1 and OCP 7.9. build123d 0.13 runs on OCP 8, which
+  moved the two shape maps the OCCT backend uses from `OCP.TopTools` to
+  `OCP.collections` under new names: on main, the whole suite against an
+  `[occt]` install that resolved build123d 0.13 gave 61 failed, 1142 passed.
+  The backend now takes either spelling. What an install resolves, with
+  `uv pip compile --no-config --python-version 3.12`: `[occt]` gets build123d
+  0.13.0 on OCP 8.0.1.1.0, and `[cadquery]` gets build123d 0.12.0 on OCP
+  7.9.3.1.1, because CadQuery 2.8 still requires OCP below 8 and the OCP
+  wheels now share a version-pinned `cadquery-ocp-proxy` that keeps the two
+  majors from being installed together.
+
 ## [0.8.0] - 2026-09-06
 
 ### Added

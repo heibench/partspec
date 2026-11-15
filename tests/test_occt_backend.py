@@ -594,7 +594,7 @@ def _non_manifold_solid():
         for face in box.faces():
             sew.Add(face.wrapped)
     sew.Perform()
-    return bd.Solid(BRepBuilderAPI_MakeSolid(TopoDS.Shell_s(sew.SewedShape())).Solid())
+    return bd.Solid(BRepBuilderAPI_MakeSolid(TopoDS.Shell(sew.SewedShape())).Solid())  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def _one_shell_holding_two_disjoint_boxes():
