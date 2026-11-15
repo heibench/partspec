@@ -2299,7 +2299,14 @@ def _summarise(report, path: Path) -> None:
 
     counts = report.counts()
     summary = ", ".join(f"{n} {name}" for name, n in counts.items() if name != "total" and n)
-    print(f"\n{report.verdict.upper()}: {summary or 'no checks'}", file=sys.stderr)
+    # A part that built and was never drawn says so beside its verdict (#456):
+    # three defects a human found in a slicer passed every check in a session
+    # that never rendered, and nothing on the console said no one had looked.
+    # A declared-empty part has nothing to draw.
+    built = any(c.kind == "builds" and c.status is Status.PASS for c in report.checks)
+    drawable = not any(c.kind == "empty" for c in report.checks)
+    unseen = " · not rendered" if built and drawable and not report.renders else ""
+    print(f"\n{report.verdict.upper()}: {summary or 'no checks'}{unseen}", file=sys.stderr)
 
     if echoed:
         # Said once, here, now that the per-check lines no longer say it. The

@@ -310,7 +310,7 @@ $ partspec check examples/spacer/spec.py:spacer
   ok   solid_count
   ok   genus
 
-PASS: 8 pass
+PASS: 8 pass · not rendered
   every dimensional limit on 'example-spacer' is unattributed: bounds derived from the model's own numbers prove the model matches itself — cite the source instead: partspec.refs for a standard it carries (iso15, iso_metric_thread, nema17), else partspec.Referenced(value, {"standard": ..., "subject": ..., "field": ...}) for anything it does not (SPEC-contract.md 10)
   /home/user/partspec/examples/spacer/outputs/spec-spacer/report.json
 ```

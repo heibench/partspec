@@ -29,7 +29,7 @@ $ partspec check examples/clearance/spec.py:interference
   ok   volume
   ok   solid_count
 
-PASS: 3 pass
+PASS: 3 pass · not rendered
   every dimensional limit on 'clearance-interference' is unattributed: …
 
 $ partspec check examples/clearance/spec.py:clearance

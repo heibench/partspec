@@ -2010,6 +2010,37 @@ def test_a_report_without_render_carries_no_renders_key(tmp_path: Path):
     assert "renders" not in report_of(out)
 
 
+@needs_build123d
+def test_the_summary_says_when_a_built_part_was_not_rendered(tmp_path: Path, capsys):
+    """A pass with no picture behind it says so (#456).
+
+    One session ran `check` without `--render` on ten parts, and three defects
+    a human found in a slicer passed every check; the console never said the
+    parts had not been looked at. A part declared `empty` has nothing to draw,
+    so it carries no such note.
+    """
+    (tmp_path / "m.py").write_text(
+        "from build123d import Box\n\n\ndef make_part():\n    return Box(20, 10, 5)\n"
+    )
+    target = py_target(tmp_path, claims="    p.watertight()\n")
+
+    assert main(["check", target, "--out", str(tmp_path / "plain")]) == 0
+    assert "PASS: 2 pass · not rendered" in capsys.readouterr().err.splitlines()
+
+    assert main(["check", target, "--render", "--out", str(tmp_path / "drawn")]) == 0
+    err = capsys.readouterr().err
+    assert "PASS: 2 pass" in err.splitlines()
+    assert "not rendered" not in err
+
+    (tmp_path / "e.py").write_text(
+        "from build123d import Box, Pos\n\n\n"
+        "def make_part():\n    return Box(10, 10, 10) & (Pos(50, 0, 0) * Box(10, 10, 10))\n"
+    )
+    empty = py_target(tmp_path, model="e.py", claims="    p.empty()\n", part_id="probe")
+    assert main(["check", empty, "--out", str(tmp_path / "empty")]) == 0
+    assert "not rendered" not in capsys.readouterr().err
+
+
 def test_check_render_on_the_occt_tier_records_the_views(tmp_path: Path):
     """The same-verb half of #18: `check --render` on a Python part records
     the views and the tessellation in the report, exactly as the OpenSCAD

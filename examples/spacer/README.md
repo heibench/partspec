@@ -58,7 +58,7 @@ runs on every pull request and on every push to `main` (`just example-spacer`):
 ```console
 $ partspec check examples/spacer/spec.py:spacer --expect examples/spacer/claims.lock
 ...
-PASS: 8 pass
+PASS: 8 pass · not rendered
 $ echo $?
 0
 ```
