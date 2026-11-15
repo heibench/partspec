@@ -120,6 +120,9 @@ def test_keep_out_fails_when_nothing_surrounds_the_region():
     result = _region_result(part, "keep_out", box(min=(0, 0, 0), max=(5, 5, 5)), shell=2.0)
     assert result.status is Status.FAIL
     assert result.detail is not None and "absent part satisfies the bare emptiness" in result.detail
+    # The remedy, not only the problem (#458): a region set inside a larger void
+    # fails the same way, and its fix is to reach the void's edge.
+    assert "extend the region to an edge of the void" in result.detail
 
 
 def test_keep_in_passes_when_solid_and_bounded():
@@ -157,6 +160,7 @@ def test_keep_in_fails_inside_an_unbounded_block():
     assert (
         result.detail is not None and "unbounded block satisfies the bare solidity" in result.detail
     )
+    assert "extend the region to a face of the feature" in result.detail
 
 
 def test_a_backend_refusal_propagates_to_the_region_check():
