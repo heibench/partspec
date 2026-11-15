@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   matched at its head, `ERROR: Assertion '`, so a model that `echo()`es the
   same text does not trip it.
 
+- **The bundled skills now say where the worked examples are** (#436). The
+  contract-authoring, openscad-authoring and build123d-authoring skills send
+  the reader to `examples/` as the set to imitate, and the directory
+  `partspec --docs` prints in an install holds only `docs/` and `skills/`, so
+  every such pointer opened nothing. The wheel still leaves `examples/` out
+  (shipping it copies untracked files from disk; see the comment above the
+  wheel's `force-include`), so each skill now links the repository's
+  `examples/` where it introduces them.
+
 - **A contract that raises while being imported now exits 4, not 64** (#438).
   The same `ModuleNotFoundError` exited 64 at the contract's top level, which
   AGENT-CONTRACT §1 reads as "fix the command", and 4 inside its factory. The

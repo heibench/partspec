@@ -151,7 +151,9 @@ p.keep_in(region.box(min=(-26.0, 0.5, 0.5), max=(26.0, 12.0, 4.5)), shell=1.0,
   `partspec.refs` is attributed like any other bound (§10). A region's `at` does not:
   a standard vouches for how big a feature is, never for where your design puts it.
 
-`examples/stepper-bracket/` is the worked part; its README explains each choice.
+`examples/stepper-bracket/` is the worked part; its README explains each choice. The
+exemplars are in the repository, not in an installed copy: every `examples/` path in this
+skill resolves under [https://github.com/heibench/partspec/tree/main/examples](https://github.com/heibench/partspec/tree/main/examples).
 
 ## 2. `param` vs `requires` vs geometry — a worked before/after
 
@@ -304,6 +306,6 @@ have their own ways of building a sound mesh of the wrong thing.
   `skills/build123d-authoring/SKILL.md`, which covers both: the Python engines fail
   by silent *selection* drift and ecosystem breakage rather than by silent geometry
   loss, so the OpenSCAD rules do not transfer.
-- The worked exemplars under `examples/` are the imitation set: the exemplar
+- The worked exemplars under [`examples/`](https://github.com/heibench/partspec/tree/main/examples) are the imitation set: the exemplar
   READMEs (`stepper-bracket`, `bearing-block`, `enclosure`) each say what to copy and
   why.
