@@ -269,7 +269,7 @@ def sew_into_solid(faces):
     for face in faces:
         sew.Add(face.wrapped)
     sew.Perform()
-    return bd.Solid(BRepBuilderAPI_MakeSolid(TopoDS.Shell_s(sew.SewedShape())).Solid())
+    return bd.Solid(BRepBuilderAPI_MakeSolid(TopoDS.Shell(sew.SewedShape())).Solid())  # pyright: ignore[reportAttributeAccessIssue]
 
 
 def forced_open_solid():
