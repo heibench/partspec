@@ -139,4 +139,5 @@ report's `environment.packages` say which versions actually measured the part.
 Contract-side guidance: `skills/contract-authoring/SKILL.md`. Source-side OpenSCAD:
 `skills/openscad-authoring/SKILL.md`. Evidence: `docs/FAILURE-MODES.md` entries 7–8;
 worked parts: `examples/stepper-bracket/` (build123d), `examples/bearing-block/`
-(both engines).
+(both engines), in the repository rather than an install, under
+[https://github.com/heibench/partspec/tree/main/examples](https://github.com/heibench/partspec/tree/main/examples).

@@ -328,8 +328,8 @@ the envelope claim from theory so the version that breaks the part fails the che
 ---
 
 Contract-side guidance is `skills/contract-authoring/SKILL.md`; the evidence base is
-`docs/FAILURE-MODES.md`; worked parts are under `examples/` (the `enclosure` and
-`bearing-block` exemplars are OpenSCAD).
+`docs/FAILURE-MODES.md`; worked parts are under [`examples/`](https://github.com/heibench/partspec/tree/main/examples) in the repository,
+not in an install (the `enclosure` and `bearing-block` exemplars are OpenSCAD).
 
 **This skill is OpenSCAD-only.** If the source you are writing is build123d or CadQuery,
 none of the rules above transfer — those engines fail by silent *selection* drift and
