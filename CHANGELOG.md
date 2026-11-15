@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **`empty` no longer passes on a model whose own `assert()` failed** (#400).
+  A failed assertion stops OpenSCAD's evaluation, so the model renders nothing
+  at exit 1 with `Current top level object is empty.`, which is also what a
+  genuinely null intersection prints. An interference probe whose first child
+  asserted, over two cubes that overlap by 500 mm³, reported `ok builds`,
+  `ok empty` and `PASS` at exit 0; it now fails both, at exit 1, and the
+  `empty` detail reads *the model's own assert() failed and the engine stopped
+  evaluating it, so the geometry never existed to be empty of:* followed by the
+  engine's line. Measured on OpenSCAD 2021.01 and 2026.10.15. The line is
+  matched at its head, `ERROR: Assertion '`, so a model that `echo()`es the
+  same text does not trip it.
+
 - **The bundled skills now say where the worked examples are** (#436). The
   contract-authoring, openscad-authoring and build123d-authoring skills send
   the reader to `examples/` as the set to imitate, and the directory

@@ -174,10 +174,11 @@ class BuildError:
     unresolved: tuple[str, ...] = ()
     """Diagnostic lines saying the engine built something other than the source.
 
-    Two causes, and the field carries both: a name the engine could not
-    resolve, and a value it could not convert, where it substitutes a default
-    (#308). `engines.openscad.is_substituted_value` tells them apart for a
-    caller that has to name one.
+    Three causes, and the field carries all of them: a name the engine could
+    not resolve, a value it could not convert, where it substitutes a default
+    (#308), and the model's own `assert()` failing, which stops evaluation
+    (#400). `engines.openscad.is_substituted_value` and `is_failed_assertion`
+    tell them apart for a caller that has to name one.
 
     An empty result means two very different things — "the intersection is
     genuinely null" and "a module name was misspelt, an include did not open,

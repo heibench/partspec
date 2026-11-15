@@ -799,6 +799,37 @@ def test_an_empty_result_caused_by_an_unresolved_name_cannot_satisfy_it(tmp_path
     assert "lib_a" in result.detail or "no_such_lib" in result.detail
 
 
+@needs_openscad
+def test_an_empty_result_caused_by_a_failed_assertion_cannot_satisfy_it(tmp_path: Path):
+    """A model that rejects its inputs renders nothing, and that nothing is not a null
+    intersection (#400).
+
+    A failed `assert()` stops evaluation: 2021.01 and 2026.10.15 both exit 1 with
+    `Current top level object is empty.`, the same as a genuinely null result.
+    Without the assertion these two cubes overlap by 500 mm3 and `empty` fails;
+    with it, `empty` passed at exit 0. The assertion is the engine saying most
+    directly that the geometry never existed.
+    """
+    scad = tmp_path / "probe.scad"
+    scad.write_text(
+        'module a() { assert(false, "model rejected its inputs"); cube(10); }\n'
+        "intersection() { a(); translate([5, 0, 0]) cube(10); }\n"
+    )
+    p = Part("probe", openscad(scad))
+    p.empty(id="no-overlap")
+
+    report = run(p, out_dir=tmp_path / "out")
+    assert report.verdict is Verdict.FAIL, [c.to_json() for c in report.checks]
+    assert _status(report, "builds") is Status.FAIL
+
+    result = next(c for c in report.checks if c.id == "no-overlap")
+    assert result.status is Status.FAIL
+    assert result.detail is not None
+    assert "assert() failed" in result.detail
+    assert "never existed" in result.detail
+    assert "model rejected its inputs" in result.detail
+
+
 @needs_scad_tier
 def test_a_part_that_builds_geometry_fails_its_declared_empty(tmp_path: Path):
     """The other direction: the parts DO share space, so the claim is disproven.
