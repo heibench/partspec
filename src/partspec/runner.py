@@ -1570,7 +1570,9 @@ def _run_region_check(
             _intrusion_sentence(in_region, intrusion) if in_region > epsilon(0.0) else None,
             f"no material lies within the {spec.shell:g} mm shell around the "
             f"region — an absent part satisfies the bare emptiness claim, so an "
-            f"empty region alone is not evidence the feature exists"
+            f"empty region alone is not evidence the feature exists. If the void "
+            f"is larger than the region, extend the region to an edge of the void, "
+            f"so part of its shell lies in material"
             if not in_shell > epsilon(0.0)
             else None,
         ]
@@ -1584,7 +1586,9 @@ def _run_region_check(
             else None,
             f"the entire {spec.shell:g} mm shell around the region is solid — an "
             f"unbounded block satisfies the bare solidity claim; nothing bounds "
-            f"the feature this region describes"
+            f"the feature this region describes. If the material runs past the "
+            f"region, extend the region to a face of the feature, so part of its "
+            f"shell lies in air"
             if not shell_volume - in_shell > epsilon(shell_volume)
             else None,
         ]

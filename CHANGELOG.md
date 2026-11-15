@@ -76,6 +76,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the path filled in, which `measure` and `render` accept as it stands. Any other
   non-Python file gets the form `<file>.py[:<factory>]`. The exit code is unchanged.
 
+- **A region's shell failure now says how to bound the region** (#458). The
+  `keep_in` and `keep_out` shell clauses named the vacuity and not the remedy,
+  and one session met them on three regions, each fixed the same way after a
+  rewrite and a re-run. Each message now ends with the fix for the common
+  cause, a region set wholly inside a larger feature: extend a `keep_in` to a
+  face of the feature, so part of its shell lies in air, or a `keep_out` to an
+  edge of the void, so part of its shell lies in material. The
+  contract-authoring skill says the same where it introduces `shell`. The
+  verdict is unchanged.
+
 - **`render` no longer writes four pictures of an empty scene at exit 0** (#433).
   The OpenSCAD tier draws its views with the engine's preview, which abandons a CSG
   tree past 100000 normalized terms and draws nothing, while the export of the same

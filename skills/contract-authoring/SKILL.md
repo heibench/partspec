@@ -132,7 +132,10 @@ p.keep_in(region.box(min=(-26.0, 0.5, 0.5), max=(26.0, 12.0, 4.5)), shell=1.0,
   Locate it off the datum the model uses, not off accumulated offsets.
 - **`shell` is not optional thinking** — it is the anti-vacuity guard. An absent part
   has an empty region too, so `keep_out` pairs "no material here" with "material near
-  here", and `keep_in` pairs the converse. Size it to a real clearance. Know when it
+  here", and `keep_in` pairs the converse. Size it to a real clearance, and draw the
+  region to the feature's boundary so the shell crosses it: a `keep_in` to a face of
+  the material, its shell into air; a `keep_out` to an edge of the void, its shell into
+  material. A region set wholly inside a larger feature fails its shell clause. Know when it
   cannot help, too: a `keep_in` rooted near the part's outer surface has a shell that
   escapes into free space, so it is never entirely solid and a solid brick passes it.
   Both `keep_in`s above are in that position; their work is done by the pair of them,
